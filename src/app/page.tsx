@@ -1,57 +1,65 @@
 'use client';
 
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 import { FiUsers, FiMonitor, FiClock, FiBell, FiCheckCircle, FiZap } from 'react-icons/fi';
 
-const fadeUp = {
-	initial: { opacity: 0, y: 30 },
-	whileInView: { opacity: 1, y: 0 },
-	transition: { duration: 0.6 },
-	viewport: { once: true },
+const fadeUp: Variants = {
+	initial: { opacity: 0, y: 40 },
+	whileInView: {
+		opacity: 1,
+		y: 0,
+		transition: {
+			duration: 0.6,
+			ease: [0.22, 1, 0.36, 1],
+		},
+	},
 };
 
 export default function LandingPage() {
 	return (
-		<div className='scroll-smooth overflow-x-hidden bg-[#F8FBFA] text-[#1F2D2B]'>
+		<div className='scroll-smooth overflow-x-hidden bg-slate-50 text-slate-800'>
 			{/* ================= HERO ================= */}
 			<section
 				id='Beranda'
-				className='scroll-mt-24 relative min-h-screen flex items-center justify-center px-6 py-28 bg-linear-to-br from-emerald-600/10 via-white to-emerald-600/10'
+				className='relative min-h-screen flex items-center justify-center px-6 py-20 bg-linear-to-br from-slate-900 via-blue-900 to-slate-800 text-white'
 			>
-				<div className='max-w-5xl mx-auto text-center space-y-8'>
+				<div className='absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.25),transparent_60%)]' />
+
+				<div className='relative max-w-4xl mx-auto text-center space-y-8'>
 					<motion.h1
 						{...fadeUp}
-						className='text-4xl md:text-6xl font-extrabold tracking-tight'
+						viewport={{ once: true }}
+						className='text-4xl md:text-6xl font-bold leading-tight tracking-tight'
 					>
-						Sistem Antrian
-						<span className='block text-emerald-600'>Loket Pendaftaran Digital</span>
+						Sistem Antrian Digital
+						<span className='block text-blue-400 mt-3'>Modern • Efisien • Profesional</span>
 					</motion.h1>
 
 					<motion.p
 						initial={{ opacity: 0 }}
 						whileInView={{ opacity: 1 }}
-						transition={{ delay: 0.2 }}
+						transition={{ delay: 0.3 }}
 						viewport={{ once: true }}
-						className='text-lg md:text-xl max-w-3xl mx-auto text-gray-600'
+						className='text-lg text-blue-100 max-w-2xl mx-auto'
 					>
-						Kelola antrian pendaftaran secara realtime, tertib, dan efisien. Mengurangi kerumunan,
-						meningkatkan pelayanan, dan transparan bagi pengguna.
+						Solusi manajemen antrian realtime untuk meningkatkan kualitas pelayanan dan pengalaman
+						pelanggan secara modern.
 					</motion.p>
 
-					<div className='flex flex-col sm:flex-row gap-4 justify-center pt-4'>
+					<div className='flex flex-col sm:flex-row gap-4 justify-center pt-6'>
 						<Link
 							href='/login'
-							className='px-8 py-3 rounded-full bg-emerald-600 text-white font-semibold shadow hover:bg-emerald-500 transition'
+							className='px-8 py-3 rounded-xl bg-blue-600 text-white font-semibold shadow-lg hover:bg-blue-700 hover:scale-105 transition'
 						>
 							Masuk Sistem
 						</Link>
 
 						<Link
 							href='/ambil-antrian'
-							className='px-8 py-3 rounded-full border border-emerald-600 text-emerald-700 hover:bg-emerald-50 transition'
+							className='px-8 py-3 rounded-xl border border-white/30 text-white hover:bg-white/10 transition'
 						>
-							Ambil Antrian
+							Ambil Nomor
 						</Link>
 					</div>
 				</div>
@@ -60,86 +68,70 @@ export default function LandingPage() {
 			{/* ================= TENTANG ================= */}
 			<section
 				id='Tentang'
-				className='scroll-mt-24 py-24 px-6 bg-white'
+				className='py-28 px-6 bg-white'
 			>
-				<div className='max-w-6xl mx-auto grid md:grid-cols-2 gap-14 items-center'>
-					<motion.div
-						initial={{ opacity: 0, x: -30 }}
-						whileInView={{ opacity: 1, x: 0 }}
+				<div className='max-w-4xl mx-auto text-center'>
+					<motion.h2
+						{...fadeUp}
 						viewport={{ once: true }}
+						className='text-3xl md:text-4xl font-bold mb-6'
 					>
-						<h2 className='text-3xl md:text-4xl font-bold mb-4'>Masalah Antrian Konvensional</h2>
-						<p className='text-gray-600 leading-relaxed'>
-							Antrian manual menyebabkan ketidakteraturan, waktu tunggu panjang, serta kurangnya
-							transparansi bagi pengunjung dan petugas loket.
-						</p>
-					</motion.div>
+						Tentang Sistem
+					</motion.h2>
 
-					<div className='grid sm:grid-cols-2 gap-4'>
-						{[
-							'Penumpukan antrian',
-							'Tidak ada estimasi waktu',
-							'Panggilan manual',
-							'Kurang transparan',
-						].map((item) => (
-							<motion.div
-								key={item}
-								{...fadeUp}
-								className='p-5 rounded-xl border bg-gray-50 hover:shadow transition'
-							>
-								{item}
-							</motion.div>
-						))}
-					</div>
+					<p className='text-slate-600 leading-relaxed text-lg'>
+						Sistem ini dirancang untuk menghadirkan pengalaman antrian yang tertib, transparan, dan
+						efisien. Cocok untuk rumah sakit, klinik, kantor pemerintahan, hingga institusi
+						pelayanan publik.
+					</p>
 				</div>
 			</section>
 
 			{/* ================= FITUR ================= */}
 			<section
 				id='Fitur'
-				className='scroll-mt-24 py-24 px-6 bg-[#F8FBFA]'
+				className='py-28 px-6 bg-slate-50'
 			>
-				<div className='max-w-7xl mx-auto text-center'>
-					<h2 className='text-3xl md:text-4xl font-bold mb-12'>Fitur Unggulan Sistem</h2>
+				<div className='max-w-6xl mx-auto text-center'>
+					<h2 className='text-3xl md:text-4xl font-bold mb-4'>Fitur Unggulan</h2>
+					<p className='text-slate-500 max-w-xl mx-auto mb-16'>
+						Dirancang untuk memberikan performa optimal dan kemudahan penggunaan.
+					</p>
 
 					<div className='grid sm:grid-cols-2 lg:grid-cols-3 gap-8'>
 						{[
 							{
 								icon: <FiUsers />,
 								title: 'Manajemen Antrian',
-								desc: 'Pengambilan nomor antrian otomatis.',
+								desc: 'Nomor otomatis & terstruktur.',
 							},
-							{
-								icon: <FiMonitor />,
-								title: 'Display Antrian',
-								desc: 'Tampilan nomor antrian realtime.',
-							},
-							{
-								icon: <FiClock />,
-								title: 'Estimasi Waktu',
-								desc: 'Perkiraan waktu tunggu akurat.',
-							},
-							{
-								icon: <FiBell />,
-								title: 'Panggilan Otomatis',
-								desc: 'Suara & visual pemanggilan loket.',
-							},
+							{ icon: <FiMonitor />, title: 'Display Realtime', desc: 'Update langsung & akurat.' },
+							{ icon: <FiClock />, title: 'Estimasi Waktu', desc: 'Perkiraan waktu tunggu jelas.' },
+							{ icon: <FiBell />, title: 'Panggilan Otomatis', desc: 'Notifikasi suara & visual.' },
 							{
 								icon: <FiCheckCircle />,
 								title: 'Status Layanan',
-								desc: 'Pantau antrian berjalan & selesai.',
+								desc: 'Pantau progres secara realtime.',
 							},
-							{ icon: <FiZap />, title: 'Pelayanan Cepat', desc: 'Efisien & minim kesalahan.' },
+							{
+								icon: <FiZap />,
+								title: 'Efisiensi Tinggi',
+								desc: 'Proses cepat & minim kesalahan.',
+							},
 						].map((item) => (
 							<motion.div
 								key={item.title}
 								{...fadeUp}
-								whileHover={{ y: -6 }}
-								className='p-6 rounded-2xl bg-white border shadow-sm hover:shadow-md transition text-left'
+								viewport={{ once: true }}
+								whileHover={{ y: -8 }}
+								className='group p-8 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-400 transition-all duration-300 text-left'
 							>
-								<div className='text-emerald-600 text-3xl mb-4'>{item.icon}</div>
-								<h3 className='text-lg font-semibold mb-2'>{item.title}</h3>
-								<p className='text-gray-600 text-sm'>{item.desc}</p>
+								<div className='w-12 h-12 flex items-center justify-center rounded-xl bg-blue-100 text-blue-600 text-xl mb-4 group-hover:bg-blue-600 group-hover:text-white transition'>
+									{item.icon}
+								</div>
+
+								<h3 className='font-semibold text-lg mb-2'>{item.title}</h3>
+								<p className='text-sm text-slate-600 leading-relaxed'>{item.desc}</p>
 							</motion.div>
 						))}
 					</div>
@@ -149,25 +141,24 @@ export default function LandingPage() {
 			{/* ================= ALUR ================= */}
 			<section
 				id='Alur'
-				className='scroll-mt-24 py-24 px-6 bg-white'
+				className='py-28 px-6 bg-white'
 			>
-				<div className='max-w-6xl mx-auto'>
-					<h2 className='text-3xl md:text-4xl font-bold mb-12 text-center'>Alur Sistem Antrian</h2>
+				<div className='max-w-5xl mx-auto text-center'>
+					<h2 className='text-3xl md:text-4xl font-bold mb-16'>Alur Sistem</h2>
 
-					<div className='grid sm:grid-cols-2 lg:grid-cols-4 gap-6'>
-						{[
-							'Ambil Nomor Antrian',
-							'Tunggu Panggilan',
-							'Dipanggil ke Loket',
-							'Pelayanan Selesai',
-						].map((step, i) => (
+					<div className='grid sm:grid-cols-2 lg:grid-cols-4 gap-8'>
+						{['Ambil Nomor', 'Tunggu Panggilan', 'Menuju Loket', 'Selesai'].map((step, i) => (
 							<motion.div
 								key={step}
 								{...fadeUp}
-								className='p-6 rounded-xl border bg-gray-50'
+								viewport={{ once: true }}
+								className='relative p-8 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg transition'
 							>
-								<p className='text-emerald-600 font-semibold mb-1'>Step {i + 1}</p>
-								<p className='font-medium'>{step}</p>
+								<div className='w-12 h-12 mx-auto mb-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-lg font-bold shadow-md'>
+									{i + 1}
+								</div>
+
+								<p className='font-medium text-slate-700'>{step}</p>
 							</motion.div>
 						))}
 					</div>
@@ -175,17 +166,16 @@ export default function LandingPage() {
 			</section>
 
 			{/* ================= CTA ================= */}
-			<section className='py-28 px-6 bg-linear-to-br from-emerald-600 to-emerald-700 text-white text-center'>
-				<h2 className='text-3xl md:text-4xl font-extrabold mb-4'>
-					Siap Tingkatkan Pelayanan Loket?
-				</h2>
-				<p className='max-w-2xl mx-auto mb-8 text-emerald-100'>
-					Gunakan sistem antrian digital untuk pelayanan lebih cepat, tertib, dan profesional.
+			<section className='py-28 px-6 bg-linear-to-r from-blue-600 to-blue-700 text-white text-center'>
+				<h2 className='text-3xl md:text-4xl font-bold mb-6'>Siap Menggunakan Sistem Ini?</h2>
+
+				<p className='max-w-xl mx-auto mb-10 text-blue-100 text-lg'>
+					Tingkatkan kualitas pelayanan dengan sistem antrian digital yang modern dan profesional.
 				</p>
 
 				<Link
 					href='/register'
-					className='inline-block px-10 py-4 rounded-full bg-white text-emerald-700 font-bold shadow hover:scale-105 transition'
+					className='inline-block px-10 py-4 rounded-xl bg-white text-blue-600 font-semibold shadow-lg hover:scale-105 transition'
 				>
 					Mulai Sekarang
 				</Link>

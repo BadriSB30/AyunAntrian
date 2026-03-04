@@ -1,14 +1,17 @@
-import { pool } from './mysql';
+// src/core/database/transaction.ts
 
-export async function withTransaction<T>(fn: (conn: unknown) => Promise<T>) {
-	const conn = await pool.getConnection();
+import { PoolClient } from 'pg';
+import { pool } from './postgres';
+
+export async function withTransaction<T>(fn: (conn: PoolClient) => Promise<T>): Promise<T> {
+	const conn = await pool.connect();
 	try {
-		await conn.beginTransaction();
-		const res = await fn(conn);
-		await conn.commit();
-		return res;
+		await conn.query('BEGIN');
+		const result = await fn(conn);
+		await conn.query('COMMIT');
+		return result;
 	} catch (e) {
-		await conn.rollback();
+		await conn.query('ROLLBACK');
 		throw e;
 	} finally {
 		conn.release();

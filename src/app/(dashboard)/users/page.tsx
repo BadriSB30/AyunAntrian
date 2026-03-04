@@ -33,16 +33,10 @@ export default function UserPage() {
 	const { data: detail, open: openDetail, close: closeDetail } = useUserDetail();
 	const { toggleStatus } = useUpdateUserStatus(refresh);
 
-	/* =========================
-	   MODAL STATE
-	========================= */
 	const [openCreate, setOpenCreate] = useState(false);
 	const [openEdit, setOpenEdit] = useState(false);
 	const [selected, setSelected] = useState<UserResponse | null>(null);
 
-	/* =========================
-	   FORM STATE
-	========================= */
 	const [form, setForm] = useState<CreateUserDTO>({
 		nama: '',
 		username: '',
@@ -51,9 +45,6 @@ export default function UserPage() {
 		role: Role.ADMIN,
 	});
 
-	/* =========================
-	   TABLE COLUMNS
-	========================= */
 	const columns = useMemo<ColumnDef<UserResponse>[]>(
 		() => [
 			{ accessorKey: 'nama', header: 'Nama' },
@@ -75,7 +66,7 @@ export default function UserPage() {
 							/>
 
 							<span
-								className={`text-xs font-medium ${isActive ? 'text-emerald-600' : 'text-gray-500'}`}
+								className={`text-xs font-medium ${isActive ? 'text-blue-600' : 'text-slate-500'}`}
 							>
 								{isActive ? 'Aktif' : 'Nonaktif'}
 							</span>
@@ -87,15 +78,13 @@ export default function UserPage() {
 				header: 'Aksi',
 				cell: ({ row }) => (
 					<div className='flex items-center justify-center gap-2'>
-						{/* DETAIL */}
 						<button
 							onClick={() => openDetail(row.original.id)}
-							className='rounded p-2 text-blue-600 hover:bg-blue-50'
+							className='rounded-lg p-2 text-blue-600 hover:bg-blue-100 transition'
 						>
 							<FiEye size={18} />
 						</button>
 
-						{/* EDIT */}
 						{role === Role.SUPERADMIN && (
 							<button
 								onClick={() => {
@@ -109,13 +98,12 @@ export default function UserPage() {
 									});
 									setOpenEdit(true);
 								}}
-								className='rounded p-2 text-emerald-600 hover:bg-emerald-50'
+								className='rounded-lg p-2 text-green-600 hover:bg-green-100 transition'
 							>
 								<FiEdit2 size={18} />
 							</button>
 						)}
 
-						{/* DELETE */}
 						{role === Role.SUPERADMIN && (
 							<button
 								disabled={deleting}
@@ -135,7 +123,7 @@ export default function UserPage() {
 									if (!confirmed) return;
 									await deleteUser(row.original.id);
 								}}
-								className='rounded p-2 text-red-600 hover:bg-red-50 disabled:opacity-50'
+								className='rounded-lg p-2 text-red-600 hover:bg-red-100 transition disabled:opacity-50'
 							>
 								<FiTrash2 size={18} />
 							</button>
@@ -147,34 +135,57 @@ export default function UserPage() {
 		[role, toggleStatus, openDetail, deleteUser, deleting],
 	);
 
-	if (loading) return <p className='p-6'>Memuat data user...</p>;
+	/* =========================
+	LOADING USER
+	========================== */
+	if (loading) {
+		return (
+			<div className='flex items-center justify-center p-10'>
+				<div className='flex flex-col items-center gap-3'>
+					<div className='h-10 w-10 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600' />
+					<p className='text-sm text-gray-500'>Memuat data user...</p>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<TVOnlyGuard>
-			<div className='space-y-6 p-8'>
+			<div className='min-h-screen bg-slate-50 p-8 space-y-6'>
 				<div className='flex items-center justify-between'>
-					<h1 className='text-2xl font-bold'>Manajemen User</h1>
+					<div>
+						<h1 className='text-2xl font-bold text-slate-800'>Manajemen User</h1>
+						<p className='text-sm text-slate-500'>Kelola akun pengguna sistem secara profesional</p>
+					</div>
 
 					{role === Role.SUPERADMIN && (
 						<button
 							onClick={() => {
-								setForm({ nama: '', username: '', email: '', password: '', role: Role.ADMIN });
+								setForm({
+									nama: '',
+									username: '',
+									email: '',
+									password: '',
+									role: Role.ADMIN,
+								});
 								setOpenCreate(true);
 							}}
-							className='flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700'
+							className='flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white shadow-sm hover:bg-blue-700 transition'
 						>
 							<FiPlus /> Tambah User
 						</button>
 					)}
 				</div>
 
-				<DataTable
-					data={list}
-					columns={columns}
-					searchable
-					pageSize={10}
-					emptyText='Belum ada data user'
-				/>
+				<div className='rounded-xl bg-white shadow-sm border border-slate-200 p-6'>
+					<DataTable
+						data={list}
+						columns={columns}
+						searchable
+						pageSize={10}
+						emptyText='Belum ada data user'
+					/>
+				</div>
 
 				{/* CREATE */}
 				<Modal
@@ -228,22 +239,27 @@ export default function UserPage() {
 					<Modal.Header title='Detail User' />
 					<Modal.Body>
 						{detail && (
-							<div className='space-y-2 text-sm'>
-								<p>
-									<b>Nama:</b> {detail.nama}
-								</p>
-								<p>
-									<b>Username:</b> {detail.username}
-								</p>
-								<p>
-									<b>Email:</b> {detail.email}
-								</p>
-								<p>
-									<b>Role:</b> {detail.role}
-								</p>
-								<p>
-									<b>Status:</b> {detail.status}
-								</p>
+							<div className='space-y-3 text-sm text-slate-700'>
+								<div className='flex justify-between'>
+									<span className='font-medium'>Nama</span>
+									<span>{detail.nama}</span>
+								</div>
+								<div className='flex justify-between'>
+									<span className='font-medium'>Username</span>
+									<span>{detail.username}</span>
+								</div>
+								<div className='flex justify-between'>
+									<span className='font-medium'>Email</span>
+									<span>{detail.email}</span>
+								</div>
+								<div className='flex justify-between'>
+									<span className='font-medium'>Role</span>
+									<span>{detail.role}</span>
+								</div>
+								<div className='flex justify-between'>
+									<span className='font-medium'>Status</span>
+									<span>{detail.status}</span>
+								</div>
 							</div>
 						)}
 					</Modal.Body>
@@ -253,9 +269,8 @@ export default function UserPage() {
 	);
 }
 
-/* =========================
-   FORM
-========================= */
+/* ================= FORM ================= */
+
 function FormUser({
 	form,
 	setForm,
@@ -265,31 +280,32 @@ function FormUser({
 	setForm: React.Dispatch<React.SetStateAction<CreateUserDTO>>;
 	isEdit?: boolean;
 }) {
+	const base =
+		'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition';
+
 	return (
 		<div className='space-y-4'>
 			<input
-				className='w-full rounded border px-3 py-2'
+				className={base}
 				placeholder='Nama'
 				value={form.nama}
 				onChange={(e) => setForm((f) => ({ ...f, nama: e.target.value }))}
 			/>
 			<input
-				className='w-full rounded border px-3 py-2'
+				className={base}
 				placeholder='Username'
 				value={form.username}
 				onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
 			/>
-
 			<input
-				className='w-full rounded border px-3 py-2'
+				className={base}
 				placeholder='Email'
 				value={form.email}
 				onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
 			/>
-
 			<input
 				type='password'
-				className='w-full rounded border px-3 py-2'
+				className={base}
 				placeholder={isEdit ? 'Password (opsional)' : 'Password'}
 				value={form.password}
 				onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
@@ -298,9 +314,8 @@ function FormUser({
 	);
 }
 
-/* =========================
-   TOGGLE
-========================= */
+/* ================= TOGGLE ================= */
+
 function StatusToggle({
 	checked,
 	onChange,
@@ -316,7 +331,7 @@ function StatusToggle({
 			disabled={disabled}
 			onClick={() => onChange(!checked)}
 			className={`relative inline-flex h-6 w-11 items-center rounded-full transition
-				${checked ? 'bg-emerald-600' : 'bg-gray-300'}
+				${checked ? 'bg-blue-600' : 'bg-slate-300'}
 				${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
 		>
 			<span

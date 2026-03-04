@@ -21,7 +21,7 @@ export default function NotFound() {
 				<p className='text-lg text-gray-600'>Sepertinya kamu tersesat di galaksi yang salah 🚀</p>
 
 				<Link
-					href='/#Beranda'
+					href='/'
 					className='mt-6 inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-md'
 				>
 					Kembali ke Beranda

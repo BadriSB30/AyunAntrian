@@ -28,12 +28,13 @@ export default function Navbar({ onLogoClick, isMobileNavOpen, onToggleMobileNav
 	const router = useRouter();
 	const pathname = usePathname();
 
-	/* ================= SCROLL HANDLER ================= */
+	/* ================= SCROLL ================= */
+
 	const scrollToSection = (id: string) => {
 		const element = document.getElementById(id);
 		if (!element) return;
 
-		const yOffset = -80; // tinggi navbar
+		const yOffset = -20;
 		const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
 
 		window.scrollTo({ top: y, behavior: 'smooth' });
@@ -46,16 +47,14 @@ export default function Navbar({ onLogoClick, isMobileNavOpen, onToggleMobileNav
 			scrollToSection(id);
 		}
 
-		// tutup menu mobile & profile
 		if (isMobileNavOpen) onToggleMobileNav();
 		setIsProfileOpen(false);
 	};
 
-	/* ================= RENDER ================= */
 	return (
-		<nav className='sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm'>
+		<nav className='sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-md shadow-sm'>
 			{/* ================= TOP BAR ================= */}
-			<div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-around'>
+			<div className='mx-auto flex max-w-7xl items-center justify-around px-4 py-3 sm:px-6 lg:px-8'>
 				{/* LOGO */}
 				<button
 					onClick={onLogoClick}
@@ -65,23 +64,23 @@ export default function Navbar({ onLogoClick, isMobileNavOpen, onToggleMobileNav
 					}`}
 				>
 					<Image
-						src='/favicon.ico'
+						src='/favicon.png'
 						alt='Logo'
 						width={36}
 						height={36}
 					/>
-					<span className='text-lg font-bold text-gray-800'>
-						<span className='text-emerald-600'>Ayun</span> Antrian
+					<span className='text-lg font-bold text-slate-800'>
+						<span className='text-blue-600'>Ayun</span> Antrian
 					</span>
 				</button>
 
 				{/* DESKTOP NAV */}
-				<ul className='hidden md:flex items-center gap-2'>
+				<ul className='hidden items-center gap-2 md:flex'>
 					{navItems.map((item) => (
 						<li key={item.label}>
 							<button
 								onClick={() => handleNavClick(item.href)}
-								className='px-4 py-2 text-sm font-medium text-gray-700 rounded-full hover:bg-emerald-50 transition'
+								className='rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-blue-50 hover:text-blue-600'
 							>
 								{item.label}
 							</button>
@@ -89,18 +88,18 @@ export default function Navbar({ onLogoClick, isMobileNavOpen, onToggleMobileNav
 					))}
 				</ul>
 
-				{/* PROFILE + MOBILE TOGGLE */}
+				{/* PROFILE + MOBILE */}
 				<div className='flex items-center gap-3'>
 					{/* PROFILE */}
 					{status === 'authenticated' && (
 						<div className='relative hidden md:block'>
 							<button
 								onClick={() => setIsProfileOpen((prev) => !prev)}
-								className='flex items-center gap-1 px-3 py-2 rounded-full hover:bg-gray-100 transition'
+								className='flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100'
 							>
-								<span className='text-sm font-medium text-gray-700'>{session?.user?.nama}</span>
+								{session?.user?.nama}
 								<HiChevronDown
-									size={20}
+									size={18}
 									className={`transition-transform ${isProfileOpen ? 'rotate-180' : ''}`}
 								/>
 							</button>
@@ -110,7 +109,7 @@ export default function Navbar({ onLogoClick, isMobileNavOpen, onToggleMobileNav
 									<motion.div
 										initial={{
 											opacity: 0,
-											y: -8,
+											y: -6,
 										}}
 										animate={{
 											opacity: 1,
@@ -118,13 +117,13 @@ export default function Navbar({ onLogoClick, isMobileNavOpen, onToggleMobileNav
 										}}
 										exit={{
 											opacity: 0,
-											y: -8,
+											y: -6,
 										}}
-										className='absolute right-0 mt-2 w-36 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50'
+										className='absolute right-0 z-50 mt-2 w-40 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg'
 									>
 										<button
 											onClick={() => signOut()}
-											className='w-full text-left px-4 py-2 text-sm hover:bg-emerald-50 transition'
+											className='w-full px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-blue-50 hover:text-blue-600'
 										>
 											Logout
 										</button>
@@ -137,29 +136,39 @@ export default function Navbar({ onLogoClick, isMobileNavOpen, onToggleMobileNav
 					{/* MOBILE TOGGLE */}
 					<button
 						onClick={onToggleMobileNav}
-						className='md:hidden p-2 rounded-lg hover:bg-gray-100 transition'
+						className='rounded-lg p-2 transition hover:bg-slate-100 md:hidden'
 						aria-label='Toggle Menu'
 					>
-						{isMobileNavOpen ? <HiX size={24} /> : <HiMenu size={24} />}
+						{isMobileNavOpen ? (
+							<HiX
+								size={24}
+								className='text-slate-700'
+							/>
+						) : (
+							<HiMenu
+								size={24}
+								className='text-slate-700'
+							/>
+						)}
 					</button>
 				</div>
 			</div>
 
-			{/* ================= MOBILE MENU OVERLAY ================= */}
+			{/* ================= MOBILE MENU ================= */}
 			<AnimatePresence>
 				{isMobileNavOpen && (
 					<motion.div
 						initial={{ opacity: 0, y: -10 }}
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: -10 }}
-						className='md:hidden absolute top-full left-0 right-0 bg-white border-t shadow-lg z-40'
+						className='absolute left-0 right-0 top-full z-40 border-t border-slate-200 bg-white shadow-lg md:hidden'
 					>
-						<ul className='p-4 space-y-2'>
+						<ul className='space-y-2 p-4'>
 							{navItems.map((item) => (
 								<li key={item.label}>
 									<button
 										onClick={() => handleNavClick(item.href)}
-										className='block w-full text-left px-4 py-3 rounded-xl hover:bg-emerald-50 transition'
+										className='block w-full rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-blue-50 hover:text-blue-600'
 									>
 										{item.label}
 									</button>
@@ -170,7 +179,7 @@ export default function Navbar({ onLogoClick, isMobileNavOpen, onToggleMobileNav
 								<li>
 									<button
 										onClick={() => signOut()}
-										className='block w-full text-left px-4 py-3 rounded-xl hover:bg-emerald-50 transition'
+										className='block w-full rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-blue-50 hover:text-blue-600'
 									>
 										Logout
 									</button>

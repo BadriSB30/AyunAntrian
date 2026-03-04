@@ -1,5 +1,6 @@
-import { pool } from '@/core/database/mysql';
-import type { RowDataPacket, ResultSetHeader } from 'mysql2';
+// src/modules/queue/queue.repository.ts
+
+import { pool } from '@/core/database/postgres';
 import { QueueEntity } from './queue.entity';
 import { QueueStatus } from '@/types/enums';
 import { HttpError } from '@/core/http/error';
@@ -10,17 +11,17 @@ import { HttpError } from '@/core/http/error';
  * =====================================================
  */
 
-type QueueRow = RowDataPacket & {
+type QueueRow = {
 	id: number;
-	tanggal: string | Date;
+	tanggal: Date;
 	nomor_antrian: number;
 	counter_id: number;
 	admin_id: number;
 	shift_id: number;
 	status: QueueStatus;
-	waktu_ambil: string | Date;
-	waktu_panggil: string | Date | null;
-	waktu_selesai: string | Date | null;
+	waktu_ambil: Date;
+	waktu_panggil: Date | null;
+	waktu_selesai: Date | null;
 };
 
 type QueueJoinRow = QueueRow & {
@@ -29,12 +30,12 @@ type QueueJoinRow = QueueRow & {
 	nama_shift: string;
 };
 
-type QueueCountRow = RowDataPacket & {
-	total: number;
-	menunggu: number;
-	dipanggil: number;
-	selesai: number;
-	batal: number;
+type QueueCountRow = {
+	total: string;
+	menunggu: string;
+	dipanggil: string;
+	selesai: string;
+	batal: string;
 };
 
 /**
@@ -68,32 +69,32 @@ export class QueueRepository {
 	// =====================================================
 
 	private static baseSelect = `
-		SELECT
-			q.id,
-			q.tanggal,
-			q.nomor_antrian,
-			q.counter_id,
-			c.nama_loket,
-			q.admin_id,
-			u.nama AS nama_admin,
-			q.shift_id,
-			s.nama_shift,
-			q.status,
-			q.waktu_ambil,
-			q.waktu_panggil,
-			q.waktu_selesai
-		FROM queues q
-		LEFT JOIN counters c ON c.id = q.counter_id
-		LEFT JOIN users u ON u.id = q.admin_id
-		LEFT JOIN shifts s ON s.id = q.shift_id
-	`;
+    SELECT
+      q.id,
+      q.tanggal,
+      q.nomor_antrian,
+      q.counter_id,
+      c.nama_loket,
+      q.admin_id,
+      u.nama AS nama_admin,
+      q.shift_id,
+      s.nama_shift,
+      q.status,
+      q.waktu_ambil,
+      q.waktu_panggil,
+      q.waktu_selesai
+    FROM queues q
+    LEFT JOIN counters c ON c.id = q.counter_id
+    LEFT JOIN users    u ON u.id = q.admin_id
+    LEFT JOIN shifts   s ON s.id = q.shift_id
+  `;
 
 	// =====================================================
 	// FIND
 	// =====================================================
 
 	static async findById(id: number): Promise<QueueEntity | null> {
-		const [rows] = await pool.query<QueueJoinRow[]>(`${this.baseSelect} WHERE q.id = ? LIMIT 1`, [
+		const { rows } = await pool.query<QueueJoinRow>(`${this.baseSelect} WHERE q.id = $1 LIMIT 1`, [
 			id,
 		]);
 
@@ -101,14 +102,14 @@ export class QueueRepository {
 	}
 
 	static async findAll(): Promise<QueueEntity[]> {
-		const [rows] = await pool.query<QueueJoinRow[]>(
+		const { rows } = await pool.query<QueueJoinRow>(
 			`${this.baseSelect} ORDER BY q.tanggal DESC, q.nomor_antrian ASC`,
 		);
 
-		return rows.map(this.mapJoinRow);
+		return rows.map((row) => this.mapJoinRow(row));
 	}
 
-	static async findByRole(role: 'admin' | 'superadmin', adminId?: number) {
+	static async findByRole(role: 'admin' | 'superadmin', adminId?: number): Promise<QueueEntity[]> {
 		if (role === 'admin' && !adminId) {
 			throw new Error('adminId is required');
 		}
@@ -116,17 +117,17 @@ export class QueueRepository {
 		const where =
 			role === 'admin'
 				? `
-				WHERE q.counter_id IN (
-					SELECT counter_id
-					FROM weekly_shift_templates
-					WHERE admin_id = ?
-				)
-			`
+          WHERE q.counter_id IN (
+            SELECT counter_id
+            FROM weekly_shift_templates
+            WHERE admin_id = $1
+          )
+        `
 				: '';
 
-		const [rows] = await pool.query<QueueJoinRow[]>(
+		const { rows } = await pool.query<QueueJoinRow>(
 			`${this.baseSelect} ${where}
-				ORDER BY q.tanggal DESC, q.waktu_ambil ASC`,
+       ORDER BY q.tanggal DESC, q.waktu_ambil ASC`,
 			role === 'admin' ? [adminId] : [],
 		);
 
@@ -138,17 +139,17 @@ export class QueueRepository {
 	// =====================================================
 
 	private static async countBase(whereSql = '', params: unknown[] = []): Promise<QueueCountResult> {
-		const [rows] = await pool.query<QueueCountRow[]>(
+		const { rows } = await pool.query<QueueCountRow>(
 			`
-			SELECT
-				COUNT(*) AS total,
-				SUM(status = ?) AS menunggu,
-				SUM(status = ?) AS dipanggil,
-				SUM(status = ?) AS selesai,
-				SUM(status = ?) AS batal
-			FROM queues
-			${whereSql}
-			`,
+      SELECT
+        COUNT(*)                                            AS total,
+        COUNT(*) FILTER (WHERE status = $1)                AS menunggu,
+        COUNT(*) FILTER (WHERE status = $2)                AS dipanggil,
+        COUNT(*) FILTER (WHERE status = $3)                AS selesai,
+        COUNT(*) FILTER (WHERE status = $4)                AS batal
+      FROM queues
+      ${whereSql}
+      `,
 			[
 				QueueStatus.MENUNGGU,
 				QueueStatus.DIPANGGIL,
@@ -172,16 +173,16 @@ export class QueueRepository {
 	// STATISTIC
 	// =====================================================
 
-	static countByRole(role: 'admin' | 'superadmin', adminId?: number) {
+	static countByRole(role: 'admin' | 'superadmin', adminId?: number): Promise<QueueCountResult> {
 		if (role === 'admin') {
 			return this.countBase(
 				`
-				WHERE counter_id IN (
-					SELECT counter_id
-					FROM weekly_shift_templates
-					WHERE admin_id = ?
-				)
-				`,
+        WHERE counter_id IN (
+          SELECT counter_id
+          FROM weekly_shift_templates
+          WHERE admin_id = $5
+        )
+        `,
 				[adminId],
 			);
 		}
@@ -192,9 +193,9 @@ export class QueueRepository {
 	// INSERT / UPDATE / DELETE
 	// =====================================================
 
-	private static async ensureCounterIsActive(counterId: number) {
-		const [rows] = await pool.query<RowDataPacket[]>(
-			`SELECT status FROM counters WHERE id = ? LIMIT 1`,
+	private static async ensureCounterIsActive(counterId: number): Promise<void> {
+		const { rows } = await pool.query<{ status: string }>(
+			`SELECT status FROM counters WHERE id = $1 LIMIT 1`,
 			[counterId],
 		);
 
@@ -206,15 +207,16 @@ export class QueueRepository {
 	static async create(data: Omit<QueueEntity, 'id'>): Promise<QueueEntity> {
 		await this.ensureCounterIsActive(data.counter_id);
 
-		const [res] = await pool.execute<ResultSetHeader>(
+		const { rows } = await pool.query<QueueJoinRow>(
 			`
-			INSERT INTO queues (
-				tanggal, nomor_antrian, counter_id,
-				admin_id, shift_id, status,
-				waktu_ambil, waktu_panggil, waktu_selesai
-			)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-			`,
+      INSERT INTO queues (
+        tanggal, nomor_antrian, counter_id,
+        admin_id, shift_id, status,
+        waktu_ambil, waktu_panggil, waktu_selesai
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING id
+      `,
 			[
 				data.tanggal,
 				data.nomor_antrian,
@@ -228,21 +230,21 @@ export class QueueRepository {
 			],
 		);
 
-		return (await this.findById(res.insertId))!;
+		return (await this.findById(rows[0].id))!;
 	}
 
-	static async updateById(id: number, data: Partial<Omit<QueueEntity, 'id'>>) {
+	static async updateById(id: number, data: Partial<Omit<QueueEntity, 'id'>>): Promise<void> {
 		const keys = Object.keys(data);
 		if (!keys.length) return;
 
-		const fields = keys.map((k) => `${k} = ?`).join(', ');
+		const fields = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
 		const values = Object.values(data);
 
-		await pool.execute(`UPDATE queues SET ${fields} WHERE id = ?`, [...values, id]);
+		await pool.query(`UPDATE queues SET ${fields} WHERE id = $${keys.length + 1}`, [...values, id]);
 	}
 
-	static async hardDelete(id: number) {
-		await pool.execute(`DELETE FROM queues WHERE id = ?`, [id]);
+	static async hardDelete(id: number): Promise<void> {
+		await pool.query(`DELETE FROM queues WHERE id = $1`, [id]);
 	}
 
 	static async getNextQueueNumberToday(
@@ -250,18 +252,18 @@ export class QueueRepository {
 		counter_id: number,
 		shift_id: number,
 	): Promise<number> {
-		const [rows] = await pool.query<RowDataPacket[]>(
+		const { rows } = await pool.query<{ last: string }>(
 			`
-			SELECT COALESCE(MAX(nomor_antrian), 0) AS last
-			FROM queues
-			WHERE DATE(tanggal) = DATE(?)
-			AND counter_id = ?
-			AND shift_id = ?
-			`,
+      SELECT COALESCE(MAX(nomor_antrian), 0) AS last
+      FROM queues
+      WHERE tanggal::date = $1::date
+        AND counter_id    = $2
+        AND shift_id      = $3
+      `,
 			[tanggal, counter_id, shift_id],
 		);
 
-		return rows[0].last + 1;
+		return Number(rows[0].last) + 1;
 	}
 
 	// =====================================================

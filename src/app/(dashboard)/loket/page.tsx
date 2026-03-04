@@ -7,6 +7,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { FiEye, FiEdit2, FiTrash2, FiPlus } from 'react-icons/fi';
+
 import { confirmDelete, confirmEdit, showError } from '@/lib/swal';
 
 import { useDeleteCounter } from '@/hooks/counter/useDeleteCounter';
@@ -17,8 +18,8 @@ import { useCounterDetail } from '@/hooks/counter/useCounterDetail';
 import { useUpdateCounterStatus } from '@/hooks/counter/useUpdateCounterStatus';
 
 import type { CounterEntity } from '@/modules/counter/counter.entity';
-
 import type { CreateCounterDTO, UpdateCounterDTO } from '@/modules/counter/counter.types';
+
 import { CounterStatus } from '@/types/enums';
 import { TVOnlyGuard } from '@/components/layout/TVOnlyGuard';
 
@@ -34,25 +35,20 @@ export default function CounterPage() {
 	const { data: detail, open: openDetail, close: closeDetail } = useCounterDetail();
 	const { toggleStatus } = useUpdateCounterStatus(refresh);
 
-	/* =========================
-	   MODAL STATE
-	========================= */
+	/* ================= STATE ================= */
+
 	const [openCreate, setOpenCreate] = useState(false);
 	const [openEdit, setOpenEdit] = useState(false);
 	const [selected, setSelected] = useState<CounterEntity | null>(null);
 
-	/* =========================
-	   FORM STATE
-	========================= */
 	const [form, setForm] = useState<CreateCounterDTO>({
 		kode_loket: '',
 		nama_loket: '',
 		status: CounterStatus.AKTIF,
 	});
 
-	/* =========================
-	   TABLE COLUMNS
-	========================= */
+	/* ================= TABLE ================= */
+
 	const columns = useMemo<ColumnDef<CounterEntity>[]>(
 		() => [
 			{
@@ -79,7 +75,7 @@ export default function CounterPage() {
 							/>
 
 							<span
-								className={`text-xs font-medium ${isActive ? 'text-emerald-600' : 'text-gray-500'}`}
+								className={`text-xs font-medium ${isActive ? 'text-blue-600' : 'text-slate-500'}`}
 							>
 								{isActive ? 'Aktif' : 'Nonaktif'}
 							</span>
@@ -91,57 +87,53 @@ export default function CounterPage() {
 				header: 'Aksi',
 				cell: ({ row }) => (
 					<div className='flex items-center justify-center gap-2'>
-						{/* DETAIL */}
 						<button
 							onClick={() => openDetail(row.original.id)}
-							className='rounded p-2 text-blue-600 hover:bg-blue-50'
+							className='rounded-md p-2 text-blue-600 transition hover:bg-blue-100'
 							title='Detail'
 						>
 							<FiEye size={18} />
 						</button>
 
-						{/* EDIT */}
 						{role === 'superadmin' && (
-							<button
-								onClick={() => {
-									setSelected(row.original);
-									setForm(row.original);
-									setOpenEdit(true);
-								}}
-								className='rounded-lg p-2 text-emerald-600 hover:bg-emerald-50 transition'
-								title='Edit'
-							>
-								<FiEdit2 size={18} />
-							</button>
-						)}
+							<>
+								<button
+									onClick={() => {
+										setSelected(row.original);
+										setForm(row.original);
+										setOpenEdit(true);
+									}}
+									className='rounded-md p-2 text-green-600 transition hover:bg-green-100'
+									title='Edit'
+								>
+									<FiEdit2 size={18} />
+								</button>
 
-						{/* DELETE */}
-						{role === 'superadmin' && (
-							<button
-								disabled={deleting}
-								onClick={async () => {
-									// ⛔ BLOK JIKA MASIH AKTIF
-									if (row.original.status === 'aktif') {
-										showError(
-											'Nonaktifkan loket terlebih dahulu sebelum menghapus.',
-											'Tidak Bisa Dihapus',
-										);
-										return;
-									}
+								<button
+									disabled={deleting}
+									onClick={async () => {
+										if (row.original.status === 'aktif') {
+											showError(
+												'Nonaktifkan loket terlebih dahulu sebelum menghapus.',
+												'Tidak Bisa Dihapus',
+											);
+											return;
+										}
 
-									const confirmed = await confirmDelete({
-										text: `Loket "${row.original.nama_loket}" akan dihapus permanen.`,
-									});
+										const confirmed = await confirmDelete({
+											text: `Loket "${row.original.nama_loket}" akan dihapus permanen.`,
+										});
 
-									if (!confirmed) return;
+										if (!confirmed) return;
 
-									await deleteCounter(row.original.id);
-								}}
-								className='rounded-lg p-2 text-red-600 hover:bg-red-50 transition disabled:opacity-50'
-								title='Hapus Permanen'
-							>
-								<FiTrash2 size={18} />
-							</button>
+										await deleteCounter(row.original.id);
+									}}
+									className='rounded-md p-2 text-red-600 transition hover:bg-red-100 disabled:opacity-50'
+									title='Hapus Permanen'
+								>
+									<FiTrash2 size={18} />
+								</button>
+							</>
 						)}
 					</div>
 				),
@@ -150,143 +142,177 @@ export default function CounterPage() {
 		[role, toggleStatus, openDetail, deleteCounter, deleting],
 	);
 
+	/* =========================
+	LOADING LOKET
+	========================== */
 	if (loading) {
-		return <p className='p-6'>Memuat data loket...</p>;
+		return (
+			<div className='flex items-center justify-center p-10'>
+				<div className='flex flex-col items-center gap-3'>
+					<div className='h-10 w-10 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600' />
+					<p className='text-sm text-gray-500'>Memuat data loket...</p>
+				</div>
+			</div>
+		);
 	}
 
 	return (
 		<TVOnlyGuard>
-			<div className='space-y-6 p-8'>
-				<div className='flex items-center justify-between'>
-					<h1 className='text-2xl font-bold'>Manajemen Loket</h1>
+			<div className='min-h-screen bg-slate-50 p-6 md:p-10'>
+				<div className='mx-auto max-w-7xl space-y-8'>
+					{/* HEADER */}
+					<div className='flex flex-col gap-2 md:flex-row md:items-center md:justify-between'>
+						<div>
+							<h1 className='text-3xl font-bold tracking-tight text-slate-800'>Manajemen Loket</h1>
+							<p className='text-sm text-slate-500'>Kelola dan atur status loket</p>
+						</div>
 
-					{role === 'superadmin' && (
-						<button
-							onClick={() => {
-								setForm({ kode_loket: '', nama_loket: '', status: CounterStatus.AKTIF });
-								setOpenCreate(true);
-							}}
-							className='flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700'
-						>
-							<FiPlus /> Tambah Loket
-						</button>
-					)}
-				</div>
-
-				<DataTable
-					data={list}
-					columns={columns}
-					searchable
-					pageSize={10}
-					emptyText='Belum ada data loket'
-				/>
-
-				{/* =========================
-			   MODAL CREATE
-			========================= */}
-				<Modal
-					isOpen={openCreate}
-					onClose={() => setOpenCreate(false)}
-				>
-					<Modal.Header title='Tambah Loket' />
-					<Modal.Body>
-						<FormCounter
-							form={form}
-							setForm={setForm}
-						/>
-					</Modal.Body>
-					<Modal.Footer
-						submitText={creating ? 'Menyimpan...' : 'Simpan'}
-						onSubmit={() => createCounter(form).then(() => setOpenCreate(false))}
-					/>
-				</Modal>
-
-				{/* =========================
-			   MODAL EDIT
-			========================= */}
-				<Modal
-					isOpen={openEdit}
-					onClose={() => setOpenEdit(false)}
-				>
-					<Modal.Header title='Edit Loket' />
-					<Modal.Body>
-						<FormCounter
-							form={form}
-							setForm={setForm}
-						/>
-					</Modal.Body>
-					<Modal.Footer
-						submitText={updating ? 'Memperbarui...' : 'Perbarui'}
-						onSubmit={async () => {
-							if (!selected) return;
-
-							const confirmed = await confirmEdit({
-								title: 'Simpan Perubahan?',
-								text: `Perubahan pada loket "${selected.nama_loket}" akan disimpan.`,
-							});
-
-							if (!confirmed) return;
-
-							await updateCounter(selected.id, form as UpdateCounterDTO);
-							setOpenEdit(false);
-						}}
-					/>
-				</Modal>
-
-				{/* =========================
-			   MODAL DETAIL
-			========================= */}
-				<Modal
-					isOpen={!!detail}
-					onClose={closeDetail}
-					size='sm'
-				>
-					<Modal.Header title='Detail Loket' />
-					<Modal.Body>
-						{detail && (
-							<div className='space-y-2 text-sm'>
-								<p>
-									<b>Kode :</b> {detail.kode_loket}
-								</p>
-								<p>
-									<b>Nama :</b> {detail.nama_loket}
-								</p>
-								<p>
-									<b>Status :</b> {detail.status}
-								</p>
-							</div>
+						{role === 'superadmin' && (
+							<button
+								onClick={() => {
+									setForm({
+										kode_loket: '',
+										nama_loket: '',
+										status: CounterStatus.AKTIF,
+									});
+									setOpenCreate(true);
+								}}
+								className='inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.98]'
+							>
+								<FiPlus />
+								Tambah Loket
+							</button>
 						)}
-					</Modal.Body>
-				</Modal>
+					</div>
+
+					{/* TABLE CARD */}
+					<div className='rounded-xl border border-slate-200 bg-white p-4 shadow-sm'>
+						<DataTable
+							data={list}
+							columns={columns}
+							searchable
+							pageSize={10}
+							emptyText='Belum ada data loket'
+						/>
+					</div>
+
+					{/* CREATE MODAL */}
+					<Modal
+						isOpen={openCreate}
+						onClose={() => setOpenCreate(false)}
+					>
+						<Modal.Header title='Tambah Loket' />
+						<Modal.Body>
+							<FormCounter
+								form={form}
+								setForm={setForm}
+							/>
+						</Modal.Body>
+						<Modal.Footer
+							submitText={creating ? 'Menyimpan...' : 'Simpan'}
+							onSubmit={() => createCounter(form).then(() => setOpenCreate(false))}
+						/>
+					</Modal>
+
+					{/* EDIT MODAL */}
+					<Modal
+						isOpen={openEdit}
+						onClose={() => setOpenEdit(false)}
+					>
+						<Modal.Header title='Edit Loket' />
+						<Modal.Body>
+							<FormCounter
+								form={form}
+								setForm={setForm}
+							/>
+						</Modal.Body>
+						<Modal.Footer
+							submitText={updating ? 'Memperbarui...' : 'Perbarui'}
+							onSubmit={async () => {
+								if (!selected) return;
+
+								const confirmed = await confirmEdit({
+									title: 'Simpan Perubahan?',
+									text: `Perubahan pada loket "${selected.nama_loket}" akan disimpan.`,
+								});
+
+								if (!confirmed) return;
+
+								await updateCounter(selected.id, form as UpdateCounterDTO);
+
+								setOpenEdit(false);
+							}}
+						/>
+					</Modal>
+
+					{/* DETAIL MODAL */}
+					<Modal
+						isOpen={!!detail}
+						onClose={closeDetail}
+						size='sm'
+					>
+						<Modal.Header title='Detail Loket' />
+						<Modal.Body>
+							{detail && (
+								<div className='space-y-3 text-sm text-slate-700'>
+									<p>
+										<b>Kode :</b> {detail.kode_loket}
+									</p>
+									<p>
+										<b>Nama :</b> {detail.nama_loket}
+									</p>
+									<p>
+										<b>Status :</b> {detail.status}
+									</p>
+								</div>
+							)}
+						</Modal.Body>
+					</Modal>
+				</div>
 			</div>
 		</TVOnlyGuard>
 	);
 }
 
-interface FormCounterProps {
+/* ================= FORM ================= */
+
+function FormCounter({
+	form,
+	setForm,
+}: {
 	form: CreateCounterDTO;
 	setForm: React.Dispatch<React.SetStateAction<CreateCounterDTO>>;
-}
-
-function FormCounter({ form, setForm }: FormCounterProps) {
+}) {
 	return (
 		<div className='space-y-4'>
 			<input
-				className='w-full rounded border px-3 py-2'
+				className='w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500'
 				placeholder='Kode Loket'
 				value={form.kode_loket}
-				onChange={(e) => setForm((f) => ({ ...f, kode_loket: e.target.value }))}
+				onChange={(e) =>
+					setForm((f) => ({
+						...f,
+						kode_loket: e.target.value,
+					}))
+				}
 			/>
 
 			<input
-				className='w-full rounded border px-3 py-2'
+				className='w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500'
 				placeholder='Nama Loket'
 				value={form.nama_loket}
-				onChange={(e) => setForm((f) => ({ ...f, nama_loket: e.target.value }))}
+				onChange={(e) =>
+					setForm((f) => ({
+						...f,
+						nama_loket: e.target.value,
+					}))
+				}
 			/>
 		</div>
 	);
 }
+
+/* ================= TOGGLE ================= */
 
 function StatusToggle({
 	checked,
@@ -303,7 +329,7 @@ function StatusToggle({
 			disabled={disabled}
 			onClick={() => onChange(!checked)}
 			className={`relative inline-flex h-6 w-11 items-center rounded-full transition
-				${checked ? 'bg-emerald-600' : 'bg-gray-300'}
+				${checked ? 'bg-blue-600' : 'bg-slate-300'}
 				${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
 		>
 			<span

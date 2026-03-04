@@ -1,19 +1,18 @@
 // src/modules/counter/counter.repository.ts
 
-import { pool } from '@/core/database/mysql';
-import type { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { pool } from '@/core/database/postgres';
 import { CounterEntity } from './counter.entity';
 import { CounterStatus } from '@/types/enums';
 
 /**
  * Representasi row DB
  */
-type CounterRow = RowDataPacket & {
+type CounterRow = {
 	id: number;
 	kode_loket: string;
 	nama_loket: string;
 	status: CounterStatus;
-	created_at: Date | string;
+	created_at: Date;
 };
 
 export class CounterRepository {
@@ -22,13 +21,13 @@ export class CounterRepository {
 	// =====================================================
 
 	static async findById(id: number): Promise<CounterEntity | null> {
-		const [rows] = await pool.query<CounterRow[]>(
+		const { rows } = await pool.query<CounterRow>(
 			`
-			SELECT id, kode_loket, nama_loket, status, created_at
-			FROM counters
-			WHERE id = ?
-			LIMIT 1
-			`,
+      SELECT id, kode_loket, nama_loket, status, created_at
+      FROM counters
+      WHERE id = $1
+      LIMIT 1
+      `,
 			[id],
 		);
 
@@ -46,24 +45,25 @@ export class CounterRepository {
 
 		const conditions: string[] = [];
 		const values: unknown[] = [];
+		let paramIndex = 1;
 
 		if (kode_loket) {
-			conditions.push('kode_loket = ?');
+			conditions.push(`kode_loket = $${paramIndex++}`);
 			values.push(kode_loket);
 		}
 
 		if (nama_loket) {
-			conditions.push('nama_loket = ?');
+			conditions.push(`nama_loket = $${paramIndex++}`);
 			values.push(nama_loket);
 		}
 
-		const [rows] = await pool.query<CounterRow[]>(
+		const { rows } = await pool.query<CounterRow>(
 			`
-			SELECT id, kode_loket, nama_loket, status, created_at
-			FROM counters
-			WHERE ${conditions.join(' OR ')}
-			LIMIT 1
-			`,
+      SELECT id, kode_loket, nama_loket, status, created_at
+      FROM counters
+      WHERE ${conditions.join(' OR ')}
+      LIMIT 1
+      `,
 			values,
 		);
 
@@ -71,15 +71,15 @@ export class CounterRepository {
 	}
 
 	static async findAll(): Promise<CounterEntity[]> {
-		const [rows] = await pool.query<CounterRow[]>(
+		const { rows } = await pool.query<CounterRow>(
 			`
-			SELECT id, kode_loket, nama_loket, status, created_at
-			FROM counters
-			ORDER BY created_at DESC
-			`,
+      SELECT id, kode_loket, nama_loket, status, created_at
+      FROM counters
+      ORDER BY created_at DESC
+      `,
 		);
 
-		return rows.map(this.mapRow);
+		return rows.map((row) => this.mapRow(row));
 	}
 
 	// =====================================================
@@ -87,20 +87,18 @@ export class CounterRepository {
 	// =====================================================
 
 	static async create(data: Omit<CounterEntity, 'id' | 'created_at'>): Promise<CounterEntity> {
-		const [result] = await pool.execute<ResultSetHeader>(
+		const { rows } = await pool.query<CounterRow>(
 			`
-			INSERT INTO counters (kode_loket, nama_loket, status)
-			VALUES (?, ?, ?)
-			`,
+      INSERT INTO counters (kode_loket, nama_loket, status)
+      VALUES ($1, $2, $3)
+      RETURNING id, kode_loket, nama_loket, status, created_at
+      `,
 			[data.kode_loket, data.nama_loket, data.status],
 		);
 
-		const created = await this.findById(result.insertId);
-		if (!created) {
-			throw new Error('Failed to create counter');
-		}
+		if (!rows.length) throw new Error('Failed to create counter');
 
-		return created;
+		return this.mapRow(rows[0]);
 	}
 
 	// =====================================================
@@ -113,36 +111,37 @@ export class CounterRepository {
 	): Promise<void> {
 		const fields: string[] = [];
 		const values: unknown[] = [];
+		let paramIndex = 1;
 
 		if (data.kode_loket !== undefined) {
-			fields.push('kode_loket = ?');
+			fields.push(`kode_loket = $${paramIndex++}`);
 			values.push(data.kode_loket);
 		}
 
 		if (data.nama_loket !== undefined) {
-			fields.push('nama_loket = ?');
+			fields.push(`nama_loket = $${paramIndex++}`);
 			values.push(data.nama_loket);
 		}
 
 		if (data.status !== undefined) {
-			fields.push('status = ?');
+			fields.push(`status = $${paramIndex++}`);
 			values.push(data.status);
 		}
 
 		if (!fields.length) return;
 
-		await pool.execute(
+		await pool.query(
 			`
-			UPDATE counters
-			SET ${fields.join(', ')}
-			WHERE id = ?
-			`,
+      UPDATE counters
+      SET ${fields.join(', ')}
+      WHERE id = $${paramIndex}
+      `,
 			[...values, id],
 		);
 	}
 
 	static async updateStatus(id: number, status: CounterStatus): Promise<void> {
-		await pool.execute(`UPDATE counters SET status = ? WHERE id = ?`, [status, id]);
+		await pool.query(`UPDATE counters SET status = $1 WHERE id = $2`, [status, id]);
 	}
 
 	// =====================================================
@@ -150,7 +149,7 @@ export class CounterRepository {
 	// =====================================================
 
 	static async hardDelete(id: number): Promise<void> {
-		await pool.execute(`DELETE FROM counters WHERE id = ?`, [id]);
+		await pool.query(`DELETE FROM counters WHERE id = $1`, [id]);
 	}
 
 	// =====================================================

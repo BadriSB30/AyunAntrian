@@ -9,11 +9,16 @@ export default function Page() {
 	const { list, loading: loadingShift } = useWeeklyShiftAssignment();
 	const { submit, loading } = useCreateQueue();
 
-	/* ================= LOADING ================= */
+	/* =========================
+	LOADING ANTRIAN
+	========================== */
 	if (loadingShift) {
 		return (
-			<div className='flex min-h-[60vh] items-center justify-center'>
-				<p className='text-center text-gray-500 text-lg animate-pulse'>Memuat loket...</p>
+			<div className='flex items-center justify-center p-10'>
+				<div className='flex flex-col items-center gap-3'>
+					<div className='h-10 w-10 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600' />
+					<p className='text-sm text-gray-500'>Memuat data shift...</p>
+				</div>
 			</div>
 		);
 	}

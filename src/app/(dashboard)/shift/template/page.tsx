@@ -16,7 +16,6 @@ import { useUpdateShiftTemplate } from '@/hooks/shiftTemplate/useUpdateShiftTemp
 import { useShiftDetailTemplate } from '@/hooks/shiftTemplate/useShiftTemplateDetail';
 
 import type { ShiftEntity } from '@/modules/shift/shift.entity';
-
 import type { CreateShiftDTO, UpdateShiftDTO } from '@/modules/shift/shift.types';
 import { TVOnlyGuard } from '@/components/layout/TVOnlyGuard';
 
@@ -31,25 +30,18 @@ export default function ShiftPage() {
 
 	const { data: detail, open: openDetail, close: closeDetail } = useShiftDetailTemplate();
 
-	/* =========================
-	   MODAL STATE
-	========================= */
 	const [openCreate, setOpenCreate] = useState(false);
 	const [openEdit, setOpenEdit] = useState(false);
 	const [selected, setSelected] = useState<ShiftEntity | null>(null);
 
-	/* =========================
-	   FORM STATE
-	========================= */
 	const [form, setForm] = useState<CreateShiftDTO>({
 		nama_shift: '',
 		jam_mulai: '',
 		jam_selesai: '',
 	});
 
-	/* =========================
-	   TABLE COLUMNS
-	========================= */
+	/* ================= TABLE ================= */
+
 	const columns = useMemo<ColumnDef<ShiftEntity>[]>(
 		() => [
 			{
@@ -71,7 +63,7 @@ export default function ShiftPage() {
 						{/* DETAIL */}
 						<button
 							onClick={() => openDetail(row.original.id)}
-							className='rounded p-2 text-blue-600 hover:bg-blue-50'
+							className='rounded-lg p-2 text-blue-600 hover:bg-blue-100 transition'
 							title='Detail'
 						>
 							<FiEye size={18} />
@@ -85,7 +77,7 @@ export default function ShiftPage() {
 									setForm(row.original);
 									setOpenEdit(true);
 								}}
-								className='rounded-lg p-2 text-emerald-600 hover:bg-emerald-50 transition'
+								className='rounded-lg p-2 text-green-600 hover:bg-green-100 transition'
 								title='Edit'
 							>
 								<FiEdit2 size={18} />
@@ -100,12 +92,10 @@ export default function ShiftPage() {
 									const confirmed = await confirmDelete({
 										text: `Shift "${row.original.nama_shift}" akan dihapus permanen.`,
 									});
-
 									if (!confirmed) return;
-
 									await deleteShift(row.original.id);
 								}}
-								className='rounded-lg p-2 text-red-600 hover:bg-red-50 transition disabled:opacity-50'
+								className='rounded-lg p-2 text-red-600 hover:bg-red-100 transition disabled:opacity-50'
 								title='Hapus Permanen'
 							>
 								<FiTrash2 size={18} />
@@ -118,15 +108,29 @@ export default function ShiftPage() {
 		[role, openDetail, deleteShift, deleting],
 	);
 
+	/* =========================
+	LOADING SHIFT TEMPLATE
+	========================== */
 	if (loading) {
-		return <p className='p-6'>Memuat data shift...</p>;
+		return (
+			<div className='flex items-center justify-center p-10'>
+				<div className='flex flex-col items-center gap-3'>
+					<div className='h-10 w-10 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600' />
+					<p className='text-sm text-gray-500'>Memuat data template shift...</p>
+				</div>
+			</div>
+		);
 	}
 
 	return (
 		<TVOnlyGuard>
-			<div className='space-y-6 p-8'>
+			<div className='min-h-screen bg-slate-50 p-8 space-y-6'>
+				{/* HEADER */}
 				<div className='flex items-center justify-between'>
-					<h1 className='text-2xl font-bold'>Manajemen Template Shift</h1>
+					<div>
+						<h1 className='text-2xl font-bold text-slate-800'>Manajemen Template Shift</h1>
+						<p className='text-sm text-slate-500'>Kelola jadwal shift secara profesional</p>
+					</div>
 
 					{role === 'superadmin' && (
 						<button
@@ -134,24 +138,25 @@ export default function ShiftPage() {
 								setForm({ nama_shift: '', jam_mulai: '', jam_selesai: '' });
 								setOpenCreate(true);
 							}}
-							className='flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700'
+							className='flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white shadow-sm hover:bg-blue-700 transition'
 						>
 							<FiPlus /> Tambah Template
 						</button>
 					)}
 				</div>
 
-				<DataTable
-					data={list}
-					columns={columns}
-					searchable
-					pageSize={10}
-					emptyText='Belum ada data shift'
-				/>
+				{/* TABLE CARD */}
+				<div className='rounded-xl bg-white shadow-sm border border-slate-200 p-6'>
+					<DataTable
+						data={list}
+						columns={columns}
+						searchable
+						pageSize={10}
+						emptyText='Belum ada data shift'
+					/>
+				</div>
 
-				{/* =========================
-			   MODAL CREATE
-			========================= */}
+				{/* CREATE MODAL */}
 				<Modal
 					isOpen={openCreate}
 					onClose={() => setOpenCreate(false)}
@@ -169,9 +174,7 @@ export default function ShiftPage() {
 					/>
 				</Modal>
 
-				{/* =========================
-			   MODAL EDIT
-			========================= */}
+				{/* EDIT MODAL */}
 				<Modal
 					isOpen={openEdit}
 					onClose={() => setOpenEdit(false)}
@@ -192,7 +195,6 @@ export default function ShiftPage() {
 								title: 'Simpan Perubahan?',
 								text: `Perubahan pada template shift "${selected.nama_shift}" akan disimpan.`,
 							});
-
 							if (!confirmed) return;
 
 							await updateShift(selected.id, form as UpdateShiftDTO);
@@ -201,9 +203,7 @@ export default function ShiftPage() {
 					/>
 				</Modal>
 
-				{/* =========================
-			   MODAL DETAIL
-			========================= */}
+				{/* DETAIL MODAL */}
 				<Modal
 					isOpen={!!detail}
 					onClose={closeDetail}
@@ -212,16 +212,19 @@ export default function ShiftPage() {
 					<Modal.Header title='Detail Template Shift' />
 					<Modal.Body>
 						{detail && (
-							<div className='space-y-2 text-sm'>
-								<p>
-									<b>Nama Shift :</b> {detail.nama_shift}
-								</p>
-								<p>
-									<b>Jam Mulai :</b> {detail.jam_mulai}
-								</p>
-								<p>
-									<b>Jam Selesai :</b> {detail.jam_selesai}
-								</p>
+							<div className='space-y-3 text-sm text-slate-700'>
+								<div className='flex justify-between'>
+									<span className='font-medium'>Nama Shift</span>
+									<span>{detail.nama_shift}</span>
+								</div>
+								<div className='flex justify-between'>
+									<span className='font-medium'>Jam Mulai</span>
+									<span>{detail.jam_mulai}</span>
+								</div>
+								<div className='flex justify-between'>
+									<span className='font-medium'>Jam Selesai</span>
+									<span>{detail.jam_selesai}</span>
+								</div>
 							</div>
 						)}
 					</Modal.Body>
@@ -231,28 +234,32 @@ export default function ShiftPage() {
 	);
 }
 
+/* ================= FORM ================= */
+
 interface FormShiftProps {
 	form: CreateShiftDTO;
 	setForm: React.Dispatch<React.SetStateAction<CreateShiftDTO>>;
 }
 
 function FormShift({ form, setForm }: FormShiftProps) {
+	const base =
+		'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition';
+
 	const toTimeInput = (value: string) => value?.slice(0, 5) ?? '';
 	const toDBTime = (value: string) => (value ? `${value}:00` : '');
 
 	return (
 		<div className='space-y-4'>
 			<input
-				className='w-full rounded border px-3 py-2'
+				className={base}
 				placeholder='Nama Shift'
 				value={form.nama_shift}
 				onChange={(e) => setForm((f) => ({ ...f, nama_shift: e.target.value }))}
 			/>
 
-			{/* JAM MULAI */}
 			<input
 				type='time'
-				className='w-full rounded border px-3 py-2'
+				className={base}
 				value={toTimeInput(form.jam_mulai)}
 				onChange={(e) =>
 					setForm((f) => ({
@@ -262,10 +269,9 @@ function FormShift({ form, setForm }: FormShiftProps) {
 				}
 			/>
 
-			{/* JAM SELESAI */}
 			<input
 				type='time'
-				className='w-full rounded border px-3 py-2'
+				className={base}
 				value={toTimeInput(form.jam_selesai)}
 				onChange={(e) =>
 					setForm((f) => ({

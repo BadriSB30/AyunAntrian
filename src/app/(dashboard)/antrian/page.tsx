@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-
 import type { ColumnDef } from '@tanstack/react-table';
 
 import { DataTable } from '@/components/ui/DataTable';
@@ -26,7 +25,8 @@ import { QueueStatus } from '@/types/enums';
 import { formatDate } from '@/utils/date';
 import { speakQueue } from '@/modules/queue/queue.speak';
 import { TVOnlyGuard } from '@/components/layout/TVOnlyGuard';
-/* ================= STATUS → BADGE VARIANT ================= */
+
+/* ================= STATUS BADGE ================= */
 
 const statusVariantMap: Record<QueueStatus, 'warning' | 'primary' | 'success' | 'danger'> = {
 	[QueueStatus.MENUNGGU]: 'warning',
@@ -85,18 +85,6 @@ export default function QueuePage() {
 				cell: ({ row }) => <QueueStatusBadge status={row.original.status} />,
 			},
 			{
-				header: 'Waktu Ambil',
-				cell: ({ row }) => formatDate(row.original.waktu_ambil),
-			},
-			{
-				header: 'Waktu Panggil',
-				cell: ({ row }) => formatDate(row.original.waktu_panggil),
-			},
-			{
-				header: 'Waktu Selesai',
-				cell: ({ row }) => formatDate(row.original.waktu_selesai),
-			},
-			{
 				header: 'Aksi',
 				cell: ({ row }) => {
 					const q = row.original;
@@ -116,7 +104,7 @@ export default function QueuePage() {
 										});
 									}
 								}}
-								className='rounded p-2 text-indigo-600 hover:bg-indigo-50'
+								className='rounded-md p-2 text-slate-600 transition hover:bg-slate-100'
 							>
 								<FiVolume2 size={18} />
 							</button>
@@ -124,7 +112,7 @@ export default function QueuePage() {
 							{/* DETAIL */}
 							<button
 								onClick={() => openDetail(q.id)}
-								className='rounded p-2 text-blue-600 hover:bg-blue-50'
+								className='rounded-md p-2 text-blue-600 transition hover:bg-blue-100'
 							>
 								<FiEye size={18} />
 							</button>
@@ -133,10 +121,12 @@ export default function QueuePage() {
 							<button
 								onClick={() => {
 									setSelected(q);
-									setForm({ status: q.status });
+									setForm({
+										status: q.status,
+									});
 									setOpenEdit(true);
 								}}
-								className='rounded p-2 text-emerald-600 hover:bg-emerald-50'
+								className='rounded-md p-2 text-green-600 transition hover:bg-green-100'
 							>
 								<FiEdit2 size={18} />
 							</button>
@@ -150,7 +140,7 @@ export default function QueuePage() {
 									});
 									if (ok) await deleteQueue(q.id);
 								}}
-								className='rounded p-2 text-red-600 hover:bg-red-50 disabled:opacity-50'
+								className='rounded-md p-2 text-red-600 transition hover:bg-red-100 disabled:opacity-50'
 							>
 								<FiTrash2 size={18} />
 							</button>
@@ -161,118 +151,140 @@ export default function QueuePage() {
 		];
 	}, [deleteQueue, deleting, openDetail, updateQueue]);
 
-	/* ================= LOADING ================= */
-
+	/* =========================
+	LOADING ANTRIAN
+	========================== */
 	if (loading) {
-		return <p className='p-8 text-center'>Memuat data antrian...</p>;
+		return (
+			<div className='flex items-center justify-center p-10'>
+				<div className='flex flex-col items-center gap-3'>
+					<div className='h-10 w-10 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600' />
+					<p className='text-sm text-gray-500'>Memuat data antrian...</p>
+				</div>
+			</div>
+		);
 	}
 
 	/* ================= RENDER ================= */
 
 	return (
 		<TVOnlyGuard>
-			<div className='space-y-6 p-8'>
-				<div className='flex flex-wrap items-center justify-between gap-4'>
-					<h1 className='text-2xl font-bold'>Manajemen Antrian</h1>
+			<div className='min-h-screen bg-slate-50 p-6 md:p-10'>
+				<div className='mx-auto max-w-7xl space-y-8'>
+					{/* HEADER */}
+					<div className='flex flex-col gap-2 md:flex-row md:items-center md:justify-between'>
+						<div>
+							<h1 className='text-3xl font-bold tracking-tight text-slate-800'>
+								Manajemen Antrian
+							</h1>
+							<p className='text-sm text-slate-500'>Kelola dan pantau antrian secara realtime</p>
+						</div>
 
-					<div className='flex items-center gap-3'>
-						<Link
-							href='/ambil-antrian'
-							className='inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 hover:shadow-md active:scale-[0.98]'
-						>
-							Ambil Antrian
-						</Link>
+						<div className='flex items-center gap-3'>
+							<Link
+								href='/ambil-antrian'
+								className='inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.98]'
+							>
+								Ambil Antrian
+							</Link>
 
-						<Link
-							href='/status-antrian'
-							className='inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 hover:shadow-md active:scale-[0.98]'
-						>
-							Status Antrian
-						</Link>
+							<Link
+								href='/status-antrian'
+								className='inline-flex items-center gap-2 rounded-lg border border-blue-600 px-5 py-2.5 text-sm font-semibold text-blue-600 transition hover:bg-blue-50 active:scale-[0.98]'
+							>
+								Status Antrian
+							</Link>
+						</div>
 					</div>
-				</div>
 
-				<DataTable
-					data={list}
-					columns={columns}
-					searchable
-					pageSize={10}
-					emptyText='Belum ada data antrian'
-				/>
-
-				{/* ================= MODAL EDIT ================= */}
-				<Modal
-					isOpen={openEdit}
-					onClose={() => setOpenEdit(false)}
-				>
-					<Modal.Header title='Edit Status Antrian' />
-					<Modal.Body>
-						<FormQueue
-							form={form}
-							setForm={setForm}
+					{/* TABLE CARD */}
+					<div className='rounded-xl border border-slate-200 bg-white p-4 shadow-sm'>
+						<DataTable
+							data={list}
+							columns={columns}
+							searchable
+							pageSize={10}
+							emptyText='Belum ada data antrian'
 						/>
-					</Modal.Body>
-					<Modal.Footer
-						submitText={updating ? 'Menyimpan...' : 'Simpan'}
-						onSubmit={async () => {
-							if (!selected || updating) return;
+					</div>
 
-							const ok = await confirmEdit({
-								title: 'Simpan perubahan?',
-								text: `Status antrian "${selected.nomor_antrian}" akan diperbarui.`,
-							});
-							if (!ok) return;
+					{/* MODAL EDIT */}
+					<Modal
+						isOpen={openEdit}
+						onClose={() => setOpenEdit(false)}
+					>
+						<Modal.Header title='Edit Status Antrian' />
+						<Modal.Body>
+							<FormQueue
+								form={form}
+								setForm={setForm}
+							/>
+						</Modal.Body>
+						<Modal.Footer
+							submitText={updating ? 'Menyimpan...' : 'Simpan'}
+							onSubmit={async () => {
+								if (!selected || updating) return;
 
-							await updateQueue(selected.id, { status: form.status });
-							setOpenEdit(false);
-						}}
-					/>
-				</Modal>
+								const ok = await confirmEdit({
+									title: 'Simpan perubahan?',
+									text: `Status antrian "${selected.nomor_antrian}" akan diperbarui.`,
+								});
 
-				{/* ================= MODAL DETAIL ================= */}
-				<Modal
-					isOpen={!!detail}
-					onClose={closeDetail}
-					size='sm'
-				>
-					<Modal.Header title='Detail Antrian' />
-					<Modal.Body>
-						{detail && (
-							<div className='space-y-2 text-sm'>
-								<p>
-									<b>Tanggal:</b> {formatDate(detail.tanggal, false)}
-								</p>
-								<p>
-									<b>Nomor:</b> {detail.nomor_antrian}
-								</p>
-								<p>
-									<b>Loket:</b> {detail.nama_loket}
-								</p>
-								<p>
-									<b>Admin:</b> {detail.nama_admin}
-								</p>
-								<p>
-									<b>Shift:</b> {detail.nama_shift}
-								</p>
+								if (!ok) return;
 
-								<p className='flex items-center gap-2'>
-									<b>Status:</b>
-									<QueueStatusBadge status={detail.status} />
-								</p>
+								await updateQueue(selected.id, {
+									status: form.status,
+								});
+								setOpenEdit(false);
+							}}
+						/>
+					</Modal>
 
-								<p>
-									<b>Waktu Ambil:</b> {formatDate(detail.waktu_ambil)}
-								</p>
-								<p>
-									<b>Waktu Panggil:</b> {formatDate(detail.waktu_panggil)}
-								</p>
-								<p>
-									<b>Waktu Selesai:</b> {formatDate(detail.waktu_selesai)}
-								</p>
-							</div>
-						)}
-					</Modal.Body>
-				</Modal>
+					{/* MODAL DETAIL */}
+					<Modal
+						isOpen={!!detail}
+						onClose={closeDetail}
+						size='sm'
+					>
+						<Modal.Header title='Detail Antrian' />
+						<Modal.Body>
+							{detail && (
+								<div className='space-y-3 text-sm text-slate-700'>
+									<p>
+										<b>Tanggal:</b> {formatDate(detail.tanggal, false)}
+									</p>
+									<p>
+										<b>Nomor:</b> {detail.nomor_antrian}
+									</p>
+									<p>
+										<b>Loket:</b> {detail.nama_loket}
+									</p>
+									<p>
+										<b>Admin:</b> {detail.nama_admin}
+									</p>
+									<p>
+										<b>Shift:</b> {detail.nama_shift}
+									</p>
+
+									<p className='flex items-center gap-2'>
+										<b>Status:</b>
+										<QueueStatusBadge status={detail.status} />
+									</p>
+
+									<p>
+										<b>Waktu Ambil:</b> {formatDate(detail.waktu_ambil)}
+									</p>
+									<p>
+										<b>Waktu Panggil:</b> {formatDate(detail.waktu_panggil)}
+									</p>
+									<p>
+										<b>Waktu Selesai:</b> {formatDate(detail.waktu_selesai)}
+									</p>
+								</div>
+							)}
+						</Modal.Body>
+					</Modal>
+				</div>
 			</div>
 		</TVOnlyGuard>
 	);
@@ -289,7 +301,7 @@ function FormQueue({
 }) {
 	return (
 		<select
-			className='w-full rounded border px-3 py-2'
+			className='w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500'
 			value={form.status}
 			onChange={(e) =>
 				setForm((prev) => ({

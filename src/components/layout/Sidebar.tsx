@@ -24,7 +24,7 @@ interface MenuItem {
 }
 
 /* =========================
-   MENU CONFIG
+MENU CONFIG
 ========================= */
 const menuItems: MenuItem[] = [
 	{
@@ -63,7 +63,7 @@ const menuItems: MenuItem[] = [
 ];
 
 /* =========================
-   PROPS
+PROPS
 ========================= */
 interface SidebarProps {
 	isOpen: boolean;
@@ -72,7 +72,7 @@ interface SidebarProps {
 }
 
 /* =========================
-   COMPONENT
+COMPONENT
 ========================= */
 export default function Sidebar({ isOpen, onClose, navbarHeight = 60 }: SidebarProps) {
 	const { data: session, status } = useSession();
@@ -81,7 +81,6 @@ export default function Sidebar({ isOpen, onClose, navbarHeight = 60 }: SidebarP
 
 	const [openShift, setOpenShift] = useState(pathname.startsWith('/shift'));
 
-	// ⛔ Jangan render menu sebelum session siap
 	if (status === 'loading') return null;
 
 	return (
@@ -90,23 +89,22 @@ export default function Sidebar({ isOpen, onClose, navbarHeight = 60 }: SidebarP
 			{isOpen && (
 				<div
 					onClick={onClose}
-					className='fixed inset-0 z-30 bg-black/30 md:hidden'
+					className='fixed inset-0 z-30 bg-black/30 backdrop-blur-sm md:hidden'
 				/>
 			)}
 
 			<motion.aside
 				initial={false}
 				animate={{ x: isOpen ? 0 : -224 }}
-				transition={{ duration: 0.25, ease: 'easeOut' }}
+				transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
 				style={{
 					top: navbarHeight,
 					height: `calc(100vh - ${navbarHeight}px)`,
 				}}
-				className='fixed left-0 z-40 w-56 bg-white shadow-lg flex flex-col'
+				className='fixed left-0 z-40 flex w-56 flex-col border-r border-slate-200 bg-white shadow-sm'
 			>
-				<nav className='flex-1 overflow-y-auto px-3 py-4 space-y-1'>
+				<nav className='flex-1 space-y-1 overflow-y-auto px-3 py-4'>
 					{menuItems.map((item) => {
-						// ⛔ Guard role (FIX ERROR TS)
 						if (!role || !item.roles.includes(role)) return null;
 
 						/* ===== DROPDOWN SHIFT ===== */
@@ -122,14 +120,14 @@ export default function Sidebar({ isOpen, onClose, navbarHeight = 60 }: SidebarP
 										className={`
 											w-full flex items-center justify-between
 											px-3 py-2.5 rounded-xl text-sm font-medium transition
-											${active ? 'bg-emerald-50 text-emerald-700' : 'text-gray-700 hover:bg-gray-100'}
+											${active ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-100'}
 										`}
 									>
 										<div className='flex items-center gap-3'>
 											<div
 												className={`
-													w-9 h-9 rounded-lg flex items-center justify-center
-													${active ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-500'}
+													w-9 h-9 rounded-lg flex items-center justify-center transition
+													${active ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'}
 												`}
 											>
 												<Icon className='text-[18px]' />
@@ -145,9 +143,18 @@ export default function Sidebar({ isOpen, onClose, navbarHeight = 60 }: SidebarP
 									<AnimatePresence>
 										{openShift && (
 											<motion.div
-												initial={{ height: 0, opacity: 0 }}
-												animate={{ height: 'auto', opacity: 1 }}
-												exit={{ height: 0, opacity: 0 }}
+												initial={{
+													height: 0,
+													opacity: 0,
+												}}
+												animate={{
+													height: 'auto',
+													opacity: 1,
+												}}
+												exit={{
+													height: 0,
+													opacity: 0,
+												}}
 												className='ml-12 mt-1 space-y-1 overflow-hidden'
 											>
 												{item.children.map((child) => {
@@ -159,9 +166,9 @@ export default function Sidebar({ isOpen, onClose, navbarHeight = 60 }: SidebarP
 															href={child.path}
 															onClick={onClose}
 															className={`
-																block px-3 py-2 rounded-lg text-sm transition
-																${activeChild ? 'bg-emerald-100 text-emerald-700' : 'text-gray-600 hover:bg-gray-100'}
-															`}
+																	block px-3 py-2 rounded-lg text-sm transition
+																	${activeChild ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}
+																`}
 														>
 															{child.name}
 														</Link>
@@ -186,17 +193,13 @@ export default function Sidebar({ isOpen, onClose, navbarHeight = 60 }: SidebarP
 								className={`
 									group flex items-center gap-3
 									px-3 py-2.5 rounded-xl text-sm font-medium transition
-									${active ? 'bg-emerald-50 text-emerald-700' : 'text-gray-700 hover:bg-gray-100'}
+									${active ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-100'}
 								`}
 							>
 								<div
 									className={`
-										w-9 h-9 rounded-lg flex items-center justify-center
-										${
-											active
-												? 'bg-emerald-100 text-emerald-600'
-												: 'bg-gray-100 text-gray-500 group-hover:bg-emerald-50'
-										}
+										w-9 h-9 rounded-lg flex items-center justify-center transition
+										${active ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500 group-hover:bg-blue-50'}
 									`}
 								>
 									<Icon className='text-[18px]' />

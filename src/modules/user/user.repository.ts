@@ -1,13 +1,14 @@
-import { pool } from '@/core/database/mysql';
-import type { RowDataPacket, ResultSetHeader } from 'mysql2';
+// src/modules/user/user.repository.ts
+
+import { pool } from '@/core/database/postgres';
 import { UserEntity } from './user.entity';
 import { Role, UserStatus } from '@/types/enums';
 
 /**
  * Representasi row DB (RAW)
- * → tetap string karena berasal dari MySQL
+ * PostgreSQL mengembalikan TIMESTAMPTZ sebagai objek Date
  */
-type UserRow = RowDataPacket & {
+type UserRow = {
 	id: number;
 	nama: string;
 	username: string;
@@ -15,8 +16,12 @@ type UserRow = RowDataPacket & {
 	password: string;
 	role: Role;
 	status: UserStatus;
-	created_at: string | Date;
+	created_at: Date;
 };
+
+const SELECT_FIELDS = `
+  id, nama, username, email, password, role, status, created_at
+`;
 
 export class UserRepository {
 	// =====================================================
@@ -24,21 +29,13 @@ export class UserRepository {
 	// =====================================================
 
 	static async findById(id: number): Promise<UserEntity | null> {
-		const [rows] = await pool.query<UserRow[]>(
+		const { rows } = await pool.query<UserRow>(
 			`
-			SELECT
-				id,
-				nama,
-				username,
-				email,
-				password,
-				role,
-				status,
-				created_at
-			FROM users
-			WHERE id = ?
-			LIMIT 1
-			`,
+      SELECT ${SELECT_FIELDS}
+      FROM users
+      WHERE id = $1
+      LIMIT 1
+      `,
 			[id],
 		);
 
@@ -46,21 +43,13 @@ export class UserRepository {
 	}
 
 	static async findByUsername(username: string): Promise<UserEntity | null> {
-		const [rows] = await pool.query<UserRow[]>(
+		const { rows } = await pool.query<UserRow>(
 			`
-			SELECT
-				id,
-				nama,
-				username,
-				email,
-				password,
-				role,
-				status,
-				created_at
-			FROM users
-			WHERE username = ?
-			LIMIT 1
-			`,
+      SELECT ${SELECT_FIELDS}
+      FROM users
+      WHERE username = $1
+      LIMIT 1
+      `,
 			[username],
 		);
 
@@ -71,21 +60,13 @@ export class UserRepository {
 		email: string | null,
 		username: string | null,
 	): Promise<UserEntity | null> {
-		const [rows] = await pool.query<UserRow[]>(
+		const { rows } = await pool.query<UserRow>(
 			`
-			SELECT
-				id,
-				nama,
-				username,
-				email,
-				password,
-				role,
-				status,
-				created_at
-			FROM users
-			WHERE email = ? OR username = ?
-			LIMIT 1
-			`,
+      SELECT ${SELECT_FIELDS}
+      FROM users
+      WHERE email = $1 OR username = $2
+      LIMIT 1
+      `,
 			[email, username],
 		);
 
@@ -93,23 +74,15 @@ export class UserRepository {
 	}
 
 	static async findAll(): Promise<UserEntity[]> {
-		const [rows] = await pool.query<UserRow[]>(
+		const { rows } = await pool.query<UserRow>(
 			`
-			SELECT
-				id,
-				nama,
-				username,
-				email,
-				password,
-				role,
-				status,
-				created_at
-			FROM users
-			ORDER BY created_at DESC
-			`,
+      SELECT ${SELECT_FIELDS}
+      FROM users
+      ORDER BY created_at DESC
+      `,
 		);
 
-		return rows.map(this.mapRow);
+		return rows.map((row) => this.mapRow(row));
 	}
 
 	// =====================================================
@@ -117,20 +90,18 @@ export class UserRepository {
 	// =====================================================
 
 	static async create(data: Omit<UserEntity, 'id' | 'created_at'>): Promise<UserEntity> {
-		const [result] = await pool.execute<ResultSetHeader>(
+		const { rows } = await pool.query<UserRow>(
 			`
-			INSERT INTO users (nama, username, email, password, role, status)
-			VALUES (?, ?, ?, ?, ?, ?)
-			`,
+      INSERT INTO users (nama, username, email, password, role, status)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING ${SELECT_FIELDS}
+      `,
 			[data.nama, data.username, data.email, data.password, data.role, data.status],
 		);
 
-		const created = await this.findById(result.insertId);
-		if (!created) {
-			throw new Error('Failed to create user');
-		}
+		if (!rows.length) throw new Error('Failed to create user');
 
-		return created;
+		return this.mapRow(rows[0]);
 	}
 
 	// =====================================================
@@ -152,28 +123,29 @@ export class UserRepository {
 
 		const fields: string[] = [];
 		const values: unknown[] = [];
+		let paramIndex = 1;
 
 		for (const key of allowedFields) {
 			if (data[key] !== undefined) {
-				fields.push(`${key} = ?`);
+				fields.push(`${key} = $${paramIndex++}`);
 				values.push(data[key]);
 			}
 		}
 
 		if (!fields.length) return;
 
-		await pool.execute(
+		await pool.query(
 			`
-			UPDATE users
-			SET ${fields.join(', ')}
-			WHERE id = ?
-			`,
+      UPDATE users
+      SET ${fields.join(', ')}
+      WHERE id = $${paramIndex}
+      `,
 			[...values, id],
 		);
 	}
 
 	static async updateStatus(id: number, status: UserStatus): Promise<void> {
-		await pool.execute(`UPDATE users SET status = ? WHERE id = ?`, [status, id]);
+		await pool.query(`UPDATE users SET status = $1 WHERE id = $2`, [status, id]);
 	}
 
 	// =====================================================
@@ -181,7 +153,7 @@ export class UserRepository {
 	// =====================================================
 
 	static async hardDelete(id: number): Promise<void> {
-		await pool.execute(`DELETE FROM users WHERE id = ?`, [id]);
+		await pool.query(`DELETE FROM users WHERE id = $1`, [id]);
 	}
 
 	// =====================================================

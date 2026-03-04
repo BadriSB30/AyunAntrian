@@ -55,7 +55,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 	}
 
 	return (
-		<div className='min-h-screen bg-gray-100'>
+		<div className='min-h-screen bg-linear-to-br from-gray-100 via-gray-200 to-gray-300'>
 			{!hideLayout && (
 				<Navbar
 					onLogoClick={() => canAccessSidebar && setIsSidebarOpen((v) => !v)}
