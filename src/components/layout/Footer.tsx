@@ -193,7 +193,7 @@ export default function Footer() {
 				{/* FOOTER BOTTOM */}
 				<div className='mt-16 flex flex-col items-center justify-between gap-3 border-t border-slate-200 pt-6 text-xs text-slate-500 sm:flex-row'>
 					<p>© {new Date().getFullYear()} AYUN ANTRIAN. All rights reserved.</p>
-					<p className='tracking-wide'>v2.1.0</p>
+					<p className='tracking-wide'>v2.1.2</p>
 				</div>
 			</div>
 		</footer>
