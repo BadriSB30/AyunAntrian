@@ -17,6 +17,7 @@ type WeeklyShiftTemplateRow = {
 	nama_loket: string;
 	admin_nama: string;
 	nama_shift: string;
+	kode_shift: string;
 	jam_mulai: string;
 	jam_selesai: string;
 };
@@ -35,6 +36,7 @@ const BASE_SELECT = `
     c.nama_loket,
     u.nama  AS admin_nama,
     s.nama_shift,
+	s.kode_shift,
     s.jam_mulai,
     s.jam_selesai
   FROM weekly_shift_templates wst
@@ -102,6 +104,7 @@ export class WeeklyShiftTemplateRepository {
         c.nama_loket,
         u.nama  AS admin_nama,
         s.nama_shift,
+		s.kode_shift,
         s.jam_mulai,
         s.jam_selesai
       FROM weekly_shift_templates wst
@@ -256,6 +259,7 @@ export class WeeklyShiftTemplateRepository {
 			shift: {
 				id: row.shift_id,
 				nama_shift: row.nama_shift,
+				kode_shift: row.kode_shift,
 				jam_mulai: row.jam_mulai,
 				jam_selesai: row.jam_selesai,
 			},

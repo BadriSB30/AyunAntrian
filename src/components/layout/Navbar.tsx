@@ -1,11 +1,10 @@
-// src/components/Navbar.tsx
 'use client';
 
 import Image from 'next/image';
 import { useSession, signOut } from 'next-auth/react';
 import { HiMenu, HiX, HiChevronDown } from 'react-icons/hi';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 
 export interface NavbarProps {
@@ -24,9 +23,27 @@ const navItems = [
 export default function Navbar({ onLogoClick, isMobileNavOpen, onToggleMobileNav }: NavbarProps) {
 	const { data: session, status } = useSession();
 	const [isProfileOpen, setIsProfileOpen] = useState(false);
+	const [isFullscreen, setIsFullscreen] = useState(false);
 
 	const router = useRouter();
 	const pathname = usePathname();
+
+	/* ================= DETECT FULLSCREEN ================= */
+
+	useEffect(() => {
+		const handleFullscreenChange = () => {
+			setIsFullscreen(!!document.fullscreenElement);
+		};
+
+		document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+		return () => {
+			document.removeEventListener('fullscreenchange', handleFullscreenChange);
+		};
+	}, []);
+
+	// jika fullscreen maka navbar tidak ditampilkan
+	if (isFullscreen) return null;
 
 	/* ================= SCROLL ================= */
 
@@ -35,9 +52,13 @@ export default function Navbar({ onLogoClick, isMobileNavOpen, onToggleMobileNav
 		if (!element) return;
 
 		const yOffset = -20;
+
 		const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
 
-		window.scrollTo({ top: y, behavior: 'smooth' });
+		window.scrollTo({
+			top: y,
+			behavior: 'smooth',
+		});
 	};
 
 	const handleNavClick = (id: string) => {
@@ -48,14 +69,17 @@ export default function Navbar({ onLogoClick, isMobileNavOpen, onToggleMobileNav
 		}
 
 		if (isMobileNavOpen) onToggleMobileNav();
+
 		setIsProfileOpen(false);
 	};
 
 	return (
 		<nav className='sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-md shadow-sm'>
 			{/* ================= TOP BAR ================= */}
+
 			<div className='mx-auto flex max-w-7xl items-center justify-around px-4 py-3 sm:px-6 lg:px-8'>
 				{/* LOGO */}
+
 				<button
 					onClick={onLogoClick}
 					disabled={!onLogoClick}
@@ -69,12 +93,14 @@ export default function Navbar({ onLogoClick, isMobileNavOpen, onToggleMobileNav
 						width={36}
 						height={36}
 					/>
+
 					<span className='text-lg font-bold text-slate-800'>
 						<span className='text-blue-600'>Ayun</span> Antrian
 					</span>
 				</button>
 
 				{/* DESKTOP NAV */}
+
 				<ul className='hidden items-center gap-2 md:flex'>
 					{navItems.map((item) => (
 						<li key={item.label}>
@@ -89,8 +115,10 @@ export default function Navbar({ onLogoClick, isMobileNavOpen, onToggleMobileNav
 				</ul>
 
 				{/* PROFILE + MOBILE */}
+
 				<div className='flex items-center gap-3'>
 					{/* PROFILE */}
+
 					{status === 'authenticated' && (
 						<div className='relative hidden md:block'>
 							<button
@@ -98,6 +126,7 @@ export default function Navbar({ onLogoClick, isMobileNavOpen, onToggleMobileNav
 								className='flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100'
 							>
 								{session?.user?.nama}
+
 								<HiChevronDown
 									size={18}
 									className={`transition-transform ${isProfileOpen ? 'rotate-180' : ''}`}
@@ -122,7 +151,7 @@ export default function Navbar({ onLogoClick, isMobileNavOpen, onToggleMobileNav
 										className='absolute right-0 z-50 mt-2 w-40 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg'
 									>
 										<button
-											onClick={() => signOut()}
+											onClick={() => signOut({ callbackUrl: '/login' })}
 											className='w-full px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-blue-50 hover:text-blue-600'
 										>
 											Logout
@@ -134,6 +163,7 @@ export default function Navbar({ onLogoClick, isMobileNavOpen, onToggleMobileNav
 					)}
 
 					{/* MOBILE TOGGLE */}
+
 					<button
 						onClick={onToggleMobileNav}
 						className='rounded-lg p-2 transition hover:bg-slate-100 md:hidden'
@@ -155,6 +185,7 @@ export default function Navbar({ onLogoClick, isMobileNavOpen, onToggleMobileNav
 			</div>
 
 			{/* ================= MOBILE MENU ================= */}
+
 			<AnimatePresence>
 				{isMobileNavOpen && (
 					<motion.div
@@ -178,7 +209,7 @@ export default function Navbar({ onLogoClick, isMobileNavOpen, onToggleMobileNav
 							{status === 'authenticated' && (
 								<li>
 									<button
-										onClick={() => signOut()}
+										onClick={() => signOut({ callbackUrl: '/login' })}
 										className='block w-full rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-blue-50 hover:text-blue-600'
 									>
 										Logout

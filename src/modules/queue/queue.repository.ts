@@ -1,20 +1,14 @@
-// src/modules/queue/queue.repository.ts
+//src/modules/queue/queue.repository.ts
 
 import { pool } from '@/core/database/postgres';
 import { QueueEntity } from './queue.entity';
 import { QueueStatus } from '@/types/enums';
 import { HttpError } from '@/core/http/error';
 
-/**
- * =====================================================
- * ROW TYPES
- * =====================================================
- */
-
 type QueueRow = {
 	id: number;
 	tanggal: Date;
-	nomor_antrian: number;
+	nomor_antrian: string;
 	counter_id: number;
 	admin_id: number;
 	shift_id: number;
@@ -38,12 +32,6 @@ type QueueCountRow = {
 	batal: string;
 };
 
-/**
- * =====================================================
- * RESULT TYPES
- * =====================================================
- */
-
 export type QueueCountResult = {
 	total: number;
 	menunggu: number;
@@ -57,17 +45,10 @@ export type QueueGroupedStat = QueueCountResult & {
 	label: string;
 };
 
-/**
- * =====================================================
- * REPOSITORY
- * =====================================================
- */
-
 export class QueueRepository {
 	// =====================================================
 	// BASE SELECT
 	// =====================================================
-
 	private static baseSelect = `
     SELECT
       q.id,
@@ -76,7 +57,7 @@ export class QueueRepository {
       q.counter_id,
       c.nama_loket,
       q.admin_id,
-      u.nama AS nama_admin,
+      u.nama        AS nama_admin,
       q.shift_id,
       s.nama_shift,
       q.status,
@@ -92,12 +73,10 @@ export class QueueRepository {
 	// =====================================================
 	// FIND
 	// =====================================================
-
 	static async findById(id: number): Promise<QueueEntity | null> {
 		const { rows } = await pool.query<QueueJoinRow>(`${this.baseSelect} WHERE q.id = $1 LIMIT 1`, [
 			id,
 		]);
-
 		return rows.length ? this.mapJoinRow(rows[0]) : null;
 	}
 
@@ -105,39 +84,29 @@ export class QueueRepository {
 		const { rows } = await pool.query<QueueJoinRow>(
 			`${this.baseSelect} ORDER BY q.tanggal DESC, q.nomor_antrian ASC`,
 		);
-
 		return rows.map((row) => this.mapJoinRow(row));
 	}
 
 	static async findByRole(role: 'admin' | 'superadmin', adminId?: number): Promise<QueueEntity[]> {
-		if (role === 'admin' && !adminId) {
-			throw new Error('adminId is required');
-		}
+		if (role === 'admin' && !adminId) throw new Error('adminId is required');
 
 		const where =
 			role === 'admin'
-				? `
-          WHERE q.counter_id IN (
-            SELECT counter_id
-            FROM weekly_shift_templates
-            WHERE admin_id = $1
-          )
-        `
+				? `WHERE q.counter_id IN (
+             SELECT counter_id FROM weekly_shift_templates WHERE admin_id = $1
+           )`
 				: '';
 
 		const { rows } = await pool.query<QueueJoinRow>(
-			`${this.baseSelect} ${where}
-       ORDER BY q.tanggal DESC, q.waktu_ambil ASC`,
+			`${this.baseSelect} ${where} ORDER BY q.tanggal DESC, q.waktu_ambil ASC`,
 			role === 'admin' ? [adminId] : [],
 		);
-
 		return rows.map((row) => this.mapJoinRow(row));
 	}
 
 	// =====================================================
 	// COUNT CORE
 	// =====================================================
-
 	private static async countBase(whereSql = '', params: unknown[] = []): Promise<QueueCountResult> {
 		const { rows } = await pool.query<QueueCountRow>(
 			`
@@ -158,7 +127,6 @@ export class QueueRepository {
 				...params,
 			],
 		);
-
 		const r = rows[0];
 		return {
 			total: Number(r.total) || 0,
@@ -169,20 +137,12 @@ export class QueueRepository {
 		};
 	}
 
-	// =====================================================
-	// STATISTIC
-	// =====================================================
-
 	static countByRole(role: 'admin' | 'superadmin', adminId?: number): Promise<QueueCountResult> {
 		if (role === 'admin') {
 			return this.countBase(
-				`
-        WHERE counter_id IN (
-          SELECT counter_id
-          FROM weekly_shift_templates
-          WHERE admin_id = $5
-        )
-        `,
+				`WHERE counter_id IN (
+           SELECT counter_id FROM weekly_shift_templates WHERE admin_id = $5
+         )`,
 				[adminId],
 			);
 		}
@@ -190,15 +150,63 @@ export class QueueRepository {
 	}
 
 	// =====================================================
+	// GENERATE NOMOR ANTRIAN
+	// Format  : {KODE_LOKET}-{KODE_SHIFT}-{NNN}
+	// Contoh  : A-B-001, CS-A-012
+	// Reset   : per shift_id (beda shift → mulai 001 lagi)
+	//           tidak melanjutkan nomor shift sebelumnya,
+	//           bahkan jika tanggal berbeda
+	// =====================================================
+	static async getNextQueueNumber(counter_id: number, shift_id: number): Promise<string> {
+		// 1. Ambil kode_loket dari counters
+		const counterRes = await pool.query<{ kode_loket: string }>(
+			`SELECT kode_loket FROM counters WHERE id = $1 LIMIT 1`,
+			[counter_id],
+		);
+		if (!counterRes.rows.length) throw new HttpError(404, 'Loket tidak ditemukan');
+		const kodeLoket = counterRes.rows[0].kode_loket.trim().toUpperCase();
+
+		// 2. Ambil kode_shift dari shifts
+		const shiftRes = await pool.query<{ kode_shift: string }>(
+			`SELECT kode_shift FROM shifts WHERE id = $1 LIMIT 1`,
+			[shift_id],
+		);
+		if (!shiftRes.rows.length) throw new HttpError(404, 'Shift tidak ditemukan');
+		const kodeShift = shiftRes.rows[0].kode_shift.trim().toUpperCase();
+
+		// 3. Prefix yang digunakan untuk antrian shift ini
+		//    Format prefix: "KODE_LOKET-KODE_SHIFT-"  contoh: "A-B-"
+		//    Hitung MAX nomor urut dari antrian dengan prefix yang sama
+		//    (tidak dibatasi tanggal → reset hanya saat shift berbeda)
+		const prefix = `${kodeLoket}-${kodeShift}-`;
+
+		const seqRes = await pool.query<{ last_seq: string }>(
+			`
+      SELECT COALESCE(MAX(
+        CAST(SPLIT_PART(nomor_antrian, '-', 3) AS INTEGER)
+      ), 0) AS last_seq
+      FROM queues
+      WHERE nomor_antrian LIKE $1
+        AND counter_id = $2
+        AND shift_id   = $3
+      `,
+			[`${prefix}%`, counter_id, shift_id],
+		);
+
+		const nextSeq = Number(seqRes.rows[0].last_seq) + 1;
+
+		// 4. Format: KODE_LOKET-KODE_SHIFT-NNN  (minimal 3 digit)
+		return `${prefix}${String(nextSeq).padStart(3, '0')}`;
+	}
+
+	// =====================================================
 	// INSERT / UPDATE / DELETE
 	// =====================================================
-
 	private static async ensureCounterIsActive(counterId: number): Promise<void> {
 		const { rows } = await pool.query<{ status: string }>(
 			`SELECT status FROM counters WHERE id = $1 LIMIT 1`,
 			[counterId],
 		);
-
 		if (!rows.length) throw new HttpError(404, 'Loket tidak ditemukan');
 		if (rows[0].status !== 'aktif')
 			throw new HttpError(403, 'Loket nonaktif, silakan hubungi admin');
@@ -206,8 +214,7 @@ export class QueueRepository {
 
 	static async create(data: Omit<QueueEntity, 'id'>): Promise<QueueEntity> {
 		await this.ensureCounterIsActive(data.counter_id);
-
-		const { rows } = await pool.query<QueueJoinRow>(
+		const { rows } = await pool.query<{ id: number }>(
 			`
       INSERT INTO queues (
         tanggal, nomor_antrian, counter_id,
@@ -229,17 +236,14 @@ export class QueueRepository {
 				data.waktu_selesai,
 			],
 		);
-
 		return (await this.findById(rows[0].id))!;
 	}
 
 	static async updateById(id: number, data: Partial<Omit<QueueEntity, 'id'>>): Promise<void> {
 		const keys = Object.keys(data);
 		if (!keys.length) return;
-
 		const fields = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
 		const values = Object.values(data);
-
 		await pool.query(`UPDATE queues SET ${fields} WHERE id = $${keys.length + 1}`, [...values, id]);
 	}
 
@@ -247,29 +251,9 @@ export class QueueRepository {
 		await pool.query(`DELETE FROM queues WHERE id = $1`, [id]);
 	}
 
-	static async getNextQueueNumberToday(
-		tanggal: Date,
-		counter_id: number,
-		shift_id: number,
-	): Promise<number> {
-		const { rows } = await pool.query<{ last: string }>(
-			`
-      SELECT COALESCE(MAX(nomor_antrian), 0) AS last
-      FROM queues
-      WHERE tanggal::date = $1::date
-        AND counter_id    = $2
-        AND shift_id      = $3
-      `,
-			[tanggal, counter_id, shift_id],
-		);
-
-		return Number(rows[0].last) + 1;
-	}
-
 	// =====================================================
 	// MAPPER
 	// =====================================================
-
 	private static mapRow(row: QueueRow): QueueEntity {
 		return {
 			id: row.id,

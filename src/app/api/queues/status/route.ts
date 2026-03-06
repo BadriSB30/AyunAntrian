@@ -1,4 +1,4 @@
-// src/app/api/queues/route.ts
+// src/app/api/queues/status/route.ts
 
 import { QueueService } from '@/modules/queue/queue.service';
 import { ok } from '@/core/http/api-response';

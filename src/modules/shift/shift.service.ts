@@ -1,10 +1,31 @@
-// modules/shift/shift.service.ts
-
 import { ShiftRepository } from './shift.repository';
 import { CreateShiftDTO, UpdateShiftDTO, ShiftResponse, ShiftListResponse } from './shift.types';
 import { ShiftEntity } from './shift.entity';
 
 export class ShiftService {
+	// =====================================================
+	// GENERATE KODE SHIFT (A, B, C, ... Z, AA, AB, ...)
+	// =====================================================
+	private static generateKodeShift(existingKodes: string[]): string {
+		const kodeSet = new Set(existingKodes);
+
+		const generateSequence = function* () {
+			const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+			for (const c of chars) yield c;
+
+			for (const c1 of chars) {
+				for (const c2 of chars) yield c1 + c2;
+			}
+		};
+
+		for (const kode of generateSequence()) {
+			if (!kodeSet.has(kode)) return kode;
+		}
+
+		throw new Error('Tidak ada kode shift yang tersedia');
+	}
+
 	// =====================================================
 	// INTERNAL TRANSFORM
 	// =====================================================
@@ -12,6 +33,7 @@ export class ShiftService {
 		return {
 			id: entity.id,
 			nama_shift: entity.nama_shift,
+			kode_shift: entity.kode_shift,
 			jam_mulai: entity.jam_mulai,
 			jam_selesai: entity.jam_selesai,
 		};
@@ -22,21 +44,25 @@ export class ShiftService {
 	// =====================================================
 	static async create(
 		actorRole: 'admin' | 'superadmin',
-		data: CreateShiftDTO
+		payload: CreateShiftDTO,
 	): Promise<ShiftResponse> {
 		if (actorRole !== 'superadmin') {
 			throw new Error('Forbidden: hanya superadmin yang boleh membuat shift');
 		}
 
-		const exists = await ShiftRepository.findByNamaShift(data.nama_shift);
-		if (exists) {
-			throw new Error('Nama shift sudah terdaftar');
-		}
+		this.validateCreatePayload(payload);
+
+		const exists = await ShiftRepository.findByNamaShift(payload.nama_shift);
+		if (exists) throw new Error('Nama shift sudah terdaftar');
+
+		const existingKodes = await ShiftRepository.findAllKodeShift();
+		const kode_shift = this.generateKodeShift(existingKodes);
 
 		const shift = await ShiftRepository.create({
-			nama_shift: data.nama_shift,
-			jam_mulai: data.jam_mulai,
-			jam_selesai: data.jam_selesai,
+			nama_shift: payload.nama_shift,
+			kode_shift,
+			jam_mulai: payload.jam_mulai,
+			jam_selesai: payload.jam_selesai,
 		});
 
 		return this.toResponse(shift);
@@ -64,24 +90,24 @@ export class ShiftService {
 	static async update(
 		actorRole: 'admin' | 'superadmin',
 		id: number,
-		data: UpdateShiftDTO
+		payload: UpdateShiftDTO,
 	): Promise<void> {
 		if (actorRole !== 'superadmin') {
 			throw new Error('Forbidden: hanya superadmin yang boleh mengubah shift');
 		}
 
-		if (data.nama_shift) {
-			const existing = await ShiftRepository.findByNamaShift(data.nama_shift);
+		this.validateUpdatePayload(payload);
+
+		if (payload.nama_shift) {
+			const existing = await ShiftRepository.findByNamaShift(payload.nama_shift);
 			if (existing && existing.id !== id) {
 				throw new Error('Nama shift sudah digunakan');
 			}
 		}
 
-		const payload: Partial<Omit<ShiftEntity, 'id'>> = {
-			...data,
-		};
+		const updatePayload: Partial<Omit<ShiftEntity, 'id'>> = { ...payload };
 
-		await ShiftRepository.updateById(id, payload);
+		await ShiftRepository.updateById(id, updatePayload);
 	}
 
 	// =====================================================
@@ -93,5 +119,29 @@ export class ShiftService {
 		}
 
 		await ShiftRepository.hardDelete(id);
+	}
+
+	// =====================================================
+	// VALIDATION CREATE
+	// =====================================================
+	private static validateCreatePayload(payload: CreateShiftDTO): void {
+		if (!payload.nama_shift) throw new Error('Nama shift wajib diisi');
+		if (!payload.jam_mulai) throw new Error('Jam mulai wajib diisi');
+		if (!payload.jam_selesai) throw new Error('Jam selesai wajib diisi');
+
+		if (payload.jam_mulai >= payload.jam_selesai) {
+			throw new Error('Jam selesai harus lebih besar dari jam mulai');
+		}
+	}
+
+	// =====================================================
+	// VALIDATION UPDATE
+	// =====================================================
+	private static validateUpdatePayload(payload: UpdateShiftDTO): void {
+		if (payload.jam_mulai && payload.jam_selesai) {
+			if (payload.jam_mulai >= payload.jam_selesai) {
+				throw new Error('Jam selesai harus lebih besar dari jam mulai');
+			}
+		}
 	}
 }

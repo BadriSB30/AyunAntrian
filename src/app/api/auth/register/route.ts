@@ -8,10 +8,11 @@ import { UserService } from '@/modules/user/user.service';
 import { Role } from '@/types/enums';
 
 // =====================================================
-// SUPERADMIN BOOTSTRAP (sementara)
+// SUPERADMIN BOOTSTRAP
 // =====================================================
-const SUPERADMIN_EMAIL = 'adminisa@gmail.com';
-const SUPERADMIN_PASSWORD = 'adminisa';
+const SUPERADMIN_EMAIL = 'adminayun30@gmail.com';
+const SUPERADMIN_USERNAME = 'ayun30';
+const SUPERADMIN_PASSWORD = 'adminayun30';
 
 // =====================================================
 // POST /api/auth/register
@@ -25,7 +26,10 @@ export async function POST(req: NextRequest) {
 			throw new HttpError(403, 'Registrasi ditutup');
 		}
 
-		const isSuperAdmin = email === SUPERADMIN_EMAIL && password === SUPERADMIN_PASSWORD;
+		const isSuperAdmin =
+			email === SUPERADMIN_EMAIL &&
+			password === SUPERADMIN_PASSWORD &&
+			username === SUPERADMIN_USERNAME;
 
 		if (!isSuperAdmin) {
 			throw new HttpError(403, 'Registrasi ditutup. Silakan hubungi admin');

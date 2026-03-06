@@ -24,25 +24,27 @@ export class UserService {
 	// =====================================================
 	// CREATE
 	// =====================================================
-	static async create(actorRole: Role, data: CreateUserDTO): Promise<UserResponse> {
+	static async create(actorRole: Role, payload: CreateUserDTO): Promise<UserResponse> {
 		if (actorRole !== Role.SUPERADMIN) {
 			throw new HttpError(403, 'Forbidden');
 		}
 
-		const exists = await UserRepository.findByEmailUsername(data.email, data.username);
+		this.validateCreatePayload(payload);
+
+		const exists = await UserRepository.findByEmailUsername(payload.email, payload.username);
 
 		if (exists) {
 			throw new HttpError(409, 'Username atau email sudah terdaftar');
 		}
 
-		const hashedPassword = await hashPassword(data.password);
+		const hashedPassword = await hashPassword(payload.password);
 
 		const user = await UserRepository.create({
-			nama: data.nama,
-			username: data.username.toLowerCase().replace(/\s+/g, ''),
-			email: data.email,
+			nama: payload.nama,
+			username: payload.username.toLowerCase().replace(/\s+/g, ''),
+			email: payload.email,
 			password: hashedPassword,
-			role: data.role,
+			role: payload.role,
 			status: UserStatus.AKTIF,
 		});
 
@@ -62,26 +64,28 @@ export class UserService {
 	// =====================================================
 	static async findAll(): Promise<UserListResponse> {
 		const users = await UserRepository.findAll();
-		return users.map(this.toResponse);
+		return users.map((u) => this.toResponse(u));
 	}
 
 	// =====================================================
 	// UPDATE
 	// =====================================================
-	static async update(actorRole: Role, id: number, data: UpdateUserDTO): Promise<void> {
+	static async update(actorRole: Role, id: number, payload: UpdateUserDTO): Promise<void> {
 		if (actorRole !== Role.SUPERADMIN) {
 			throw new HttpError(403, 'Forbidden');
 		}
+
+		this.validateUpdatePayload(payload);
 
 		const user = await UserRepository.findById(id);
 		if (!user) {
 			throw new HttpError(404, 'User tidak ditemukan');
 		}
 
-		if (data.email || data.username) {
+		if (payload.email || payload.username) {
 			const exists = await UserRepository.findByEmailUsername(
-				data.email ?? null,
-				data.username ?? null,
+				payload.email ?? null,
+				payload.username ?? null,
 			);
 
 			if (exists && exists.id !== id) {
@@ -89,22 +93,22 @@ export class UserService {
 			}
 		}
 
-		const payload: Partial<Omit<UserEntity, 'id' | 'created_at'>> = {};
+		const updatePayload: Partial<Omit<UserEntity, 'id' | 'created_at'>> = {};
 
-		if (data.nama !== undefined) payload.nama = data.nama;
-		if (data.email !== undefined) payload.email = data.email;
-		if (data.role !== undefined) payload.role = data.role;
-		if (data.status !== undefined) payload.status = data.status;
+		if (payload.nama !== undefined) updatePayload.nama = payload.nama;
+		if (payload.email !== undefined) updatePayload.email = payload.email;
+		if (payload.role !== undefined) updatePayload.role = payload.role;
+		if (payload.status !== undefined) updatePayload.status = payload.status;
 
-		if (data.username) {
-			payload.username = data.username.toLowerCase().replace(/\s+/g, '');
+		if (payload.username) {
+			updatePayload.username = payload.username.toLowerCase().replace(/\s+/g, '');
 		}
 
-		if (data.password) {
-			payload.password = await hashPassword(data.password);
+		if (payload.password) {
+			updatePayload.password = await hashPassword(payload.password);
 		}
 
-		await UserRepository.updateById(id, payload);
+		await UserRepository.updateById(id, updatePayload);
 	}
 
 	// =====================================================
@@ -137,5 +141,57 @@ export class UserService {
 		}
 
 		await UserRepository.hardDelete(id);
+	}
+
+	// =====================================================
+	// VALIDATION CREATE
+	// =====================================================
+	private static validateCreatePayload(payload: CreateUserDTO): void {
+		if (!payload.nama) {
+			throw new HttpError(400, 'Nama wajib diisi');
+		}
+
+		if (!payload.username) {
+			throw new HttpError(400, 'Username wajib diisi');
+		}
+
+		if (!payload.email) {
+			throw new HttpError(400, 'Email wajib diisi');
+		}
+
+		if (!payload.password) {
+			throw new HttpError(400, 'Password wajib diisi');
+		}
+
+		if (!payload.role) {
+			throw new HttpError(400, 'Role wajib dipilih');
+		}
+
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+		if (!emailRegex.test(payload.email)) {
+			throw new HttpError(400, 'Format email tidak valid');
+		}
+
+		if (payload.password.length < 6) {
+			throw new HttpError(400, 'Password minimal 6 karakter');
+		}
+	}
+
+	// =====================================================
+	// VALIDATION UPDATE
+	// =====================================================
+	private static validateUpdatePayload(payload: UpdateUserDTO): void {
+		if (payload.email) {
+			const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+			if (!emailRegex.test(payload.email)) {
+				throw new HttpError(400, 'Format email tidak valid');
+			}
+		}
+
+		if (payload.password && payload.password.length < 6) {
+			throw new HttpError(400, 'Password minimal 6 karakter');
+		}
 	}
 }

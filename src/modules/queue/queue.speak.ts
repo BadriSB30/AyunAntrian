@@ -1,3 +1,5 @@
+//src/modules/queue/queue.speak.ts
+
 export const speakQueue = (nomorAntrian: string | number, namaLoket: string) => {
 	if (typeof window === 'undefined') return;
 

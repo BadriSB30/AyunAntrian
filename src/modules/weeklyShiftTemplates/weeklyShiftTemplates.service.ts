@@ -1,3 +1,5 @@
+//src/modules/weeklyShiftTemplates/weeklyShiftTemplates.service.ts
+
 import { WeeklyShiftTemplateRepository } from './weeklyShiftTemplates.repository';
 import type {
 	CreateWeeklyShiftTemplateDTO,
@@ -21,119 +23,144 @@ function isMySqlDuplicateError(error: unknown): error is MySqlError {
 }
 
 export class WeeklyShiftTemplateService {
-	// =========================
+	// =====================================================
 	// CREATE
-	// =========================
+	// =====================================================
 	static async create(
 		actorRole: 'admin' | 'superadmin',
-		data: CreateWeeklyShiftTemplateDTO,
+		payload: CreateWeeklyShiftTemplateDTO,
 	): Promise<WeeklyShiftTemplateResponse> {
 		if (actorRole !== 'superadmin') {
 			throw new HttpError(403, 'Hanya superadmin yang boleh membuat weekly shift template');
 		}
 
-		// =========================
-		// VALIDASI SESUAI DB
-		// =========================
+		this.validatePayload(payload);
+
 		const existing = await WeeklyShiftTemplateRepository.findByTemplateKey(
-			data.hari,
-			data.counter_id,
-			data.shift_id,
+			payload.hari,
+			payload.counter_id,
+			payload.shift_id,
 		);
 
 		if (existing.length > 0) {
 			throw new HttpError(
 				400,
-				`Template untuk ${data.hari} pada loket ini dan shift tersebut sudah ada`,
+				`Template untuk ${payload.hari} pada loket ini dan shift tersebut sudah ada`,
 			);
 		}
 
-		// =========================
-		// INSERT + SAFETY NET
-		// =========================
 		try {
-			return await WeeklyShiftTemplateRepository.create(data);
+			return await WeeklyShiftTemplateRepository.create(payload);
 		} catch (error: unknown) {
 			if (isMySqlDuplicateError(error)) {
 				throw new HttpError(
 					400,
-					`Template untuk ${data.hari} pada loket ini dan shift tersebut sudah ada`,
+					`Template untuk ${payload.hari} pada loket ini dan shift tersebut sudah ada`,
 				);
 			}
 			throw error;
 		}
 	}
 
-	// =========================
+	// =====================================================
 	// UPDATE
-	// =========================
+	// =====================================================
 	static async update(
 		actorRole: 'admin' | 'superadmin',
 		id: number,
-		data: UpdateWeeklyShiftTemplateDTO,
+		payload: UpdateWeeklyShiftTemplateDTO,
 	): Promise<WeeklyShiftTemplateResponse> {
 		if (actorRole !== 'superadmin') {
 			throw new HttpError(403, 'Hanya superadmin yang boleh mengubah weekly shift template');
 		}
 
+		this.validatePayload(payload);
+
 		const existing = await WeeklyShiftTemplateRepository.findByTemplateKey(
-			data.hari,
-			data.counter_id,
-			data.shift_id,
+			payload.hari,
+			payload.counter_id,
+			payload.shift_id,
 		);
 
 		if (existing.some((t) => t.id !== id)) {
 			throw new HttpError(
 				400,
-				`Template untuk ${data.hari} pada loket ini dan shift tersebut sudah ada`,
+				`Template untuk ${payload.hari} pada loket ini dan shift tersebut sudah ada`,
 			);
 		}
 
 		try {
-			return await WeeklyShiftTemplateRepository.updateById(id, data);
+			return await WeeklyShiftTemplateRepository.updateById(id, payload);
 		} catch (error: unknown) {
 			if (isMySqlDuplicateError(error)) {
 				throw new HttpError(
 					400,
-					`Template untuk ${data.hari} pada loket ini dan shift tersebut sudah ada`,
+					`Template untuk ${payload.hari} pada loket ini dan shift tersebut sudah ada`,
 				);
 			}
 			throw error;
 		}
 	}
 
-	// =========================
+	// =====================================================
 	// DELETE
-	// =========================
+	// =====================================================
 	static async delete(actorRole: 'admin' | 'superadmin', id: number): Promise<void> {
 		if (actorRole !== 'superadmin') {
-			throw new Error('Forbidden: hanya superadmin yang boleh menghapus weekly shift template');
+			throw new HttpError(403, 'Hanya superadmin yang boleh menghapus weekly shift template');
 		}
 
 		await WeeklyShiftTemplateRepository.hardDelete(id);
 	}
 
-	// =========================
-	// FIND
-	// =========================
+	// =====================================================
+	// FIND BY ID
+	// =====================================================
 	static async findById(id: number): Promise<WeeklyShiftTemplateResponse | null> {
 		return WeeklyShiftTemplateRepository.findById(id);
 	}
 
-	// =========================
-	// SUPERADMIN: SEMUA DATA
-	// =========================
+	// =====================================================
+	// FIND ALL (SUPERADMIN)
+	// =====================================================
 	static async findAll(actorRole: 'admin' | 'superadmin') {
 		if (actorRole !== 'superadmin') {
-			throw new Error('Forbidden');
+			throw new HttpError(403, 'Forbidden');
 		}
+
 		return WeeklyShiftTemplateRepository.findAll();
 	}
 
-	// =========================
-	// FIND AKTIF HARI INI
-	// =========================
+	// =====================================================
+	// FIND ACTIVE TODAY
+	// =====================================================
 	static async findActiveToday(): Promise<WeeklyShiftTemplateListResponse> {
 		return WeeklyShiftTemplateRepository.findActiveToday();
+	}
+
+	// =====================================================
+	// VALIDATION
+	// =====================================================
+	private static validatePayload(
+		payload: CreateWeeklyShiftTemplateDTO | UpdateWeeklyShiftTemplateDTO,
+	): void {
+		if (!payload.hari) {
+			throw new HttpError(400, 'Hari wajib dipilih');
+		}
+
+		if (!payload.counter_id || payload.counter_id <= 0) {
+			throw new HttpError(400, 'Loket wajib dipilih');
+		}
+
+		if (!payload.shift_id || payload.shift_id <= 0) {
+			throw new HttpError(400, 'Shift wajib dipilih');
+		}
+
+		// =============================
+		// VALIDASI USER (WAJIB 1 USER)
+		// =============================
+		if (!payload.admin_id || payload.admin_id <= 0) {
+			throw new HttpError(400, 'User yang ditugaskan wajib dipilih');
+		}
 	}
 }

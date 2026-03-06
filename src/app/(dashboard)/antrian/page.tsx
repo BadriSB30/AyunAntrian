@@ -17,6 +17,8 @@ import { useQueueByRole } from '@/hooks/queue/useQueueByRole';
 import { useUpdateQueue } from '@/hooks/queue/useUpdateQueue';
 import { useDeleteQueue } from '@/hooks/queue/useDeleteQueue';
 import { useQueueDetail } from '@/hooks/queue/useQueueDetail';
+// Tambahkan di bagian atas file, setelah import
+import { QUEUE_BROADCAST_CHANNEL } from '@/hooks/queue/useQueueStatus';
 
 import type { QueueEntity } from '@/modules/queue/queue.entity';
 import type { UpdateQueueDTO } from '@/modules/queue/queue.types';
@@ -45,6 +47,17 @@ function QueueStatusBadge({ status }: { status: QueueStatus }) {
 			{status.toLowerCase()}
 		</Badge>
 	);
+}
+
+// Fungsi helper untuk broadcast ke tab TV
+function broadcastQueueUpdate() {
+	try {
+		const bc = new BroadcastChannel(QUEUE_BROADCAST_CHANNEL);
+		bc.postMessage({ type: 'QUEUE_UPDATED' });
+		bc.close();
+	} catch {
+		// diabaikan jika tidak tersedia
+	}
 }
 
 /* ================= PAGE ================= */
@@ -95,13 +108,12 @@ export default function QueuePage() {
 							<button
 								onClick={async () => {
 									if (!q.nama_loket) return;
-
 									speakQueue(q.nomor_antrian, q.nama_loket);
-
 									if (q.status !== QueueStatus.DIPANGGIL) {
-										await updateQueue(q.id, {
-											status: QueueStatus.DIPANGGIL,
-										});
+										await updateQueue(q.id, { status: QueueStatus.DIPANGGIL });
+										broadcastQueueUpdate(); // ✅ Kirim sinyal ke tab TV
+									} else {
+										broadcastQueueUpdate(); // ✅ Tetap broadcast meski status sudah DIPANGGIL
 									}
 								}}
 								className='rounded-md p-2 text-slate-600 transition hover:bg-slate-100'

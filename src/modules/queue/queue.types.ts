@@ -1,30 +1,21 @@
-// modules/queue/queue.types.ts
+//src/modules/queue/queue.types.ts
+
 import { QueueStatus } from '@/types/enums';
 
-// =========================
-// CREATE
-// =========================
-// modules/queue/queue.types.ts
 export interface CreateQueueDTO {
 	counter_id: number;
 	admin_id: number;
 	shift_id: number;
 }
 
-// =========================
-// UPDATE (SAFE)
-// =========================
 export interface UpdateQueueDTO {
 	status?: QueueStatus;
 }
 
-// =========================
-// RESPONSE (API SAFE)
-// =========================
 export interface QueueResponse {
 	id: number;
 	tanggal: Date;
-	nomor_antrian: number;
+	nomor_antrian: string; // ← string, bukan number
 	counter_id: number;
 	admin_id: number;
 	shift_id: number;
@@ -37,7 +28,4 @@ export interface QueueResponse {
 	nama_shift?: string;
 }
 
-// =========================
-// LIST RESPONSE
-// =========================
 export type QueueListResponse = QueueResponse[];

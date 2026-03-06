@@ -21,9 +21,12 @@ import type { CreateUserDTO, UpdateUserDTO } from '@/modules/user/user.types';
 import { Role, UserStatus } from '@/types/enums';
 import { TVOnlyGuard } from '@/components/layout/TVOnlyGuard';
 
+const PROTECTED_EMAIL = 'adminayun30@gmail.com';
+
 export default function UserPage() {
 	const { data: session } = useSession();
 	const role = session?.user?.role;
+	const sessionEmail = session?.user?.email;
 
 	const { list, loading, refresh } = useUser();
 	const { submit: createUser, loading: creating } = useCreateUser(refresh);
@@ -50,16 +53,20 @@ export default function UserPage() {
 			{ accessorKey: 'nama', header: 'Nama' },
 			{ accessorKey: 'email', header: 'Email' },
 			{ accessorKey: 'role', header: 'Role' },
+
 			{
 				header: 'Status',
 				cell: ({ row }) => {
 					const isActive = row.original.status === UserStatus.AKTIF;
 
+					const isProtected =
+						row.original.email === PROTECTED_EMAIL || row.original.email === sessionEmail;
+
 					return (
 						<div className='flex items-center justify-center gap-3'>
 							<StatusToggle
 								checked={isActive}
-								disabled={role !== Role.SUPERADMIN}
+								disabled={role !== Role.SUPERADMIN || isProtected}
 								onChange={(value) =>
 									toggleStatus(row.original.id, value ? UserStatus.AKTIF : UserStatus.NONAKTIF)
 								}
@@ -74,70 +81,84 @@ export default function UserPage() {
 					);
 				},
 			},
+
 			{
 				header: 'Aksi',
-				cell: ({ row }) => (
-					<div className='flex items-center justify-center gap-2'>
-						<button
-							onClick={() => openDetail(row.original.id)}
-							className='rounded-lg p-2 text-blue-600 hover:bg-blue-100 transition'
-						>
-							<FiEye size={18} />
-						</button>
+				cell: ({ row }) => {
+					const isProtected =
+						row.original.email === PROTECTED_EMAIL || row.original.email === sessionEmail;
 
-						{role === Role.SUPERADMIN && (
+					return (
+						<div className='flex items-center justify-center gap-2'>
 							<button
-								onClick={() => {
-									setSelected(row.original);
-									setForm({
-										nama: row.original.nama,
-										username: row.original.username,
-										email: row.original.email,
-										password: '',
-										role: row.original.role,
-									});
-									setOpenEdit(true);
-								}}
-								className='rounded-lg p-2 text-green-600 hover:bg-green-100 transition'
+								onClick={() => openDetail(row.original.id)}
+								className='rounded-lg p-2 text-blue-600 hover:bg-blue-100 transition'
 							>
-								<FiEdit2 size={18} />
+								<FiEye size={18} />
 							</button>
-						)}
 
-						{role === Role.SUPERADMIN && (
-							<button
-								disabled={deleting}
-								onClick={async () => {
-									if (row.original.status === UserStatus.AKTIF) {
-										showError(
-											'Nonaktifkan user terlebih dahulu sebelum menghapus.',
-											'Tidak Bisa Dihapus',
-										);
-										return;
-									}
+							{role === Role.SUPERADMIN && (
+								<button
+									disabled={isProtected}
+									onClick={() => {
+										if (isProtected) return;
 
-									const confirmed = await confirmDelete({
-										text: `User "${row.original.nama}" akan dihapus permanen.`,
-									});
+										setSelected(row.original);
 
-									if (!confirmed) return;
-									await deleteUser(row.original.id);
-								}}
-								className='rounded-lg p-2 text-red-600 hover:bg-red-100 transition disabled:opacity-50'
-							>
-								<FiTrash2 size={18} />
-							</button>
-						)}
-					</div>
-				),
+										setForm({
+											nama: row.original.nama,
+											username: row.original.username,
+											email: row.original.email,
+											password: '',
+											role: row.original.role,
+										});
+
+										setOpenEdit(true);
+									}}
+									className='rounded-lg p-2 text-green-600 hover:bg-green-100 transition disabled:opacity-40 disabled:cursor-not-allowed'
+								>
+									<FiEdit2 size={18} />
+								</button>
+							)}
+
+							{role === Role.SUPERADMIN && (
+								<button
+									disabled={deleting || isProtected}
+									onClick={async () => {
+										if (isProtected) {
+											showError('User utama sistem tidak dapat dihapus.', 'Aksi Ditolak');
+											return;
+										}
+
+										if (row.original.status === UserStatus.AKTIF) {
+											showError(
+												'Nonaktifkan user terlebih dahulu sebelum menghapus.',
+												'Tidak Bisa Dihapus',
+											);
+											return;
+										}
+
+										const confirmed = await confirmDelete({
+											text: `User "${row.original.nama}" akan dihapus permanen.`,
+										});
+
+										if (!confirmed) return;
+
+										await deleteUser(row.original.id);
+									}}
+									className='rounded-lg p-2 text-red-600 hover:bg-red-100 transition disabled:opacity-40 disabled:cursor-not-allowed'
+								>
+									<FiTrash2 size={18} />
+								</button>
+							)}
+						</div>
+					);
+				},
 			},
 		],
-		[role, toggleStatus, openDetail, deleteUser, deleting],
+		[role, toggleStatus, openDetail, deleteUser, deleting, sessionEmail],
 	);
 
-	/* =========================
-	LOADING USER
-	========================== */
 	if (loading) {
 		return (
 			<div className='flex items-center justify-center p-10'>
@@ -222,8 +243,10 @@ export default function UserPage() {
 						submitText={updating ? 'Memperbarui...' : 'Perbarui'}
 						onSubmit={async () => {
 							if (!selected) return;
+
 							const confirmed = await confirmEdit();
 							if (!confirmed) return;
+
 							await updateUser(selected.id, form as UpdateUserDTO);
 							setOpenEdit(false);
 						}}
@@ -244,18 +267,22 @@ export default function UserPage() {
 									<span className='font-medium'>Nama</span>
 									<span>{detail.nama}</span>
 								</div>
+
 								<div className='flex justify-between'>
 									<span className='font-medium'>Username</span>
 									<span>{detail.username}</span>
 								</div>
+
 								<div className='flex justify-between'>
 									<span className='font-medium'>Email</span>
 									<span>{detail.email}</span>
 								</div>
+
 								<div className='flex justify-between'>
 									<span className='font-medium'>Role</span>
 									<span>{detail.role}</span>
 								</div>
+
 								<div className='flex justify-between'>
 									<span className='font-medium'>Status</span>
 									<span>{detail.status}</span>
@@ -291,18 +318,21 @@ function FormUser({
 				value={form.nama}
 				onChange={(e) => setForm((f) => ({ ...f, nama: e.target.value }))}
 			/>
+
 			<input
 				className={base}
 				placeholder='Username'
 				value={form.username}
 				onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
 			/>
+
 			<input
 				className={base}
 				placeholder='Email'
 				value={form.email}
 				onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
 			/>
+
 			<input
 				type='password'
 				className={base}
@@ -310,6 +340,20 @@ function FormUser({
 				value={form.password}
 				onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
 			/>
+
+			<select
+				className={base}
+				value={form.role}
+				onChange={(e) =>
+					setForm((f) => ({
+						...f,
+						role: e.target.value as Role,
+					}))
+				}
+			>
+				<option value={Role.ADMIN}>Admin</option>
+				<option value={Role.SUPERADMIN}>Superadmin</option>
+			</select>
 		</div>
 	);
 }

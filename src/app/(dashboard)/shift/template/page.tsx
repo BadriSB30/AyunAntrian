@@ -49,6 +49,10 @@ export default function ShiftPage() {
 				header: 'Nama Shift',
 			},
 			{
+				accessorKey: 'kode_shift',
+				header: 'Kode Shift',
+			},
+			{
 				accessorKey: 'jam_mulai',
 				header: 'Jam Mulai',
 			},
