@@ -269,11 +269,6 @@ export default function UserPage() {
 								</div>
 
 								<div className='flex justify-between'>
-									<span className='font-medium'>Username</span>
-									<span>{detail.username}</span>
-								</div>
-
-								<div className='flex justify-between'>
 									<span className='font-medium'>Email</span>
 									<span>{detail.email}</span>
 								</div>

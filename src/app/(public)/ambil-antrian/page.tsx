@@ -52,7 +52,7 @@ export default function Page() {
 	========================================================= */
 	return (
 		<div className='mx-auto max-w-7xl p-6 lg:p-10'>
-			<div className='grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
+			<div className='grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3'>
 				{list.map((item) => {
 					const isLoading = loading === item.counter_id;
 
