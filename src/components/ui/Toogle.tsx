@@ -1,4 +1,4 @@
-function StatusToggle({
+export function StatusToggle({
 	checked,
 	onChange,
 	disabled,
@@ -13,7 +13,7 @@ function StatusToggle({
 			disabled={disabled}
 			onClick={() => onChange(!checked)}
 			className={`relative inline-flex h-6 w-11 items-center rounded-full transition
-				${checked ? 'bg-emerald-600' : 'bg-gray-300'}
+				${checked ? 'bg-blue-600' : 'bg-gray-300'}
 				${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
 		>
 			<span

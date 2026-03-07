@@ -6,6 +6,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
+import { StatusToggle } from '@/components/ui/Toogle';
 import { FiEye, FiEdit2, FiTrash2, FiPlus } from 'react-icons/fi';
 
 import { confirmDelete, confirmEdit, showError } from '@/lib/swal';
@@ -309,33 +310,5 @@ function FormCounter({
 				}
 			/>
 		</div>
-	);
-}
-
-/* ================= TOGGLE ================= */
-
-function StatusToggle({
-	checked,
-	onChange,
-	disabled = false,
-}: {
-	checked: boolean;
-	onChange: (value: boolean) => void;
-	disabled?: boolean;
-}) {
-	return (
-		<button
-			type='button'
-			disabled={disabled}
-			onClick={() => onChange(!checked)}
-			className={`relative inline-flex h-6 w-11 items-center rounded-full transition
-				${checked ? 'bg-blue-600' : 'bg-slate-300'}
-				${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
-		>
-			<span
-				className={`inline-block h-4 w-4 transform rounded-full bg-white transition
-					${checked ? 'translate-x-6' : 'translate-x-1'}`}
-			/>
-		</button>
 	);
 }
