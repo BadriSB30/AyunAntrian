@@ -58,8 +58,6 @@
                           └────────────────────────┘
 ```
 
-````
-
 ---
 
 ## ✨ Fitur Utama
@@ -242,4 +240,3 @@ Proyek ini dilisensikan di bawah **[MIT License](https://www.google.com/search?q
 ```
 
 ```
-````
